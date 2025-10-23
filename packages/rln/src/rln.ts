@@ -1,5 +1,6 @@
 import { Logger } from "@waku/utils";
 import init, * as zerokitRLN from "@waku/zerokit-rln-wasm";
+import initUtils from "@waku/zerokit-rln-wasm-utils";
 
 import { DEFAULT_RATE_LIMIT } from "./contract/constants.js";
 import { RLNCredentialsManager } from "./credentials_manager.js";
@@ -16,6 +17,7 @@ export class RLNInstance extends RLNCredentialsManager {
    */
   public static async create(): Promise<RLNInstance> {
     try {
+      await initUtils();
       await init();
       zerokitRLN.initPanicHook();
 

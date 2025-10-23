@@ -50,6 +50,43 @@ export class BytesUtils {
   }
 
   /**
+   * Convert a BigInt to a Uint8Array with configurable output endianness
+   * @param value - The BigInt to convert
+   * @param byteLength - The desired byte length of the output (optional, auto-calculated if not provided)
+   * @param outputEndianness - Endianness of the output bytes ('big' or 'little')
+   * @returns Uint8Array representation of the BigInt
+   */
+  public static fromBigInt(
+    value: bigint,
+    byteLength: number,
+    outputEndianness: "big" | "little" = "little"
+  ): Uint8Array {
+    if (value < 0n) {
+      throw new Error("Cannot convert negative BigInt to bytes");
+    }
+
+    if (value === 0n) {
+      return new Uint8Array(byteLength);
+    }
+
+    const result = new Uint8Array(byteLength);
+    let workingValue = value;
+
+    // Extract bytes in big-endian order
+    for (let i = byteLength - 1; i >= 0; i--) {
+      result[i] = Number(workingValue & 0xffn);
+      workingValue = workingValue >> 8n;
+    }
+
+    // If we need little-endian output, reverse the array
+    if (outputEndianness === "little") {
+      result.reverse();
+    }
+
+    return result;
+  }
+
+  /**
    * Writes an unsigned integer to a buffer in little-endian format
    */
   public static writeUIntLE(
