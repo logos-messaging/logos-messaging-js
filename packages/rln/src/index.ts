@@ -1,4 +1,3 @@
-import { RLN_ABI } from "./contract/abi/rln.js";
 import { RLN_CONTRACT } from "./contract/index.js";
 import { RLNBaseContract } from "./contract/rln_base_contract.js";
 import { createRLN } from "./create.js";
@@ -14,9 +13,16 @@ export {
   RLNInstance,
   IdentityCredential,
   RLN_CONTRACT,
-  extractMetaMaskSigner,
-  RLN_ABI
+  extractMetaMaskSigner
 };
+
+// Export wagmi-generated ABIs
+export {
+  wakuRlnV2Abi,
+  linearPriceCalculatorAbi,
+  iPriceCalculatorAbi,
+  membershipUpgradeableAbi
+} from "./contract/wagmi/generated.js";
 
 export type {
   DecryptedCredentials,

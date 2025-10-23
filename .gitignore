@@ -20,3 +20,4 @@ packages/discovery/mock_local_storage
 CLAUDE.md
 .env
 postgres-data/
+packages/rln/waku-rlnv2-contract/

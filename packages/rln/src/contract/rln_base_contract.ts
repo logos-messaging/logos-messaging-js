@@ -4,11 +4,11 @@ import { ethers } from "ethers";
 import { IdentityCredential } from "../identity.js";
 import { DecryptedCredentials } from "../keystore/types.js";
 
-import { RLN_ABI } from "./abi/rln.js";
 import {
   DEFAULT_RATE_LIMIT,
   PRICE_CALCULATOR_CONTRACT,
-  RATE_LIMIT_PARAMS
+  RATE_LIMIT_PARAMS,
+  RLN_CONTRACT
 } from "./constants.js";
 import {
   CustomQueryOptions,
@@ -47,7 +47,8 @@ export class RLNBaseContract {
 
     log.info("Initializing RLNBaseContract", { address, rateLimit });
 
-    this.contract = contract || new ethers.Contract(address, RLN_ABI, signer);
+    this.contract =
+      contract || new ethers.Contract(address, RLN_CONTRACT.abi, signer);
     this.rateLimit = rateLimit;
 
     try {

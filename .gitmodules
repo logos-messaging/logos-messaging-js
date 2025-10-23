@@ -1,0 +1,3 @@
+[submodule "packages/rln/waku-rlnv2-contract"]
+	path = packages/rln/waku-rlnv2-contract
+	url = git@github.com:waku-org/waku-rlnv2-contract.git
