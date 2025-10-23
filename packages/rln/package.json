@@ -43,7 +43,9 @@
     "watch:build": "tsc -p tsconfig.json -w",
     "watch:test": "mocha --watch",
     "prepublish": "npm run build",
-    "reset-hard": "git clean -dfx -e .idea && git reset --hard && npm i && npm run build"
+    "reset-hard": "git clean -dfx -e .idea && git reset --hard && npm i && npm run build",
+    "setup:contract-abi": "./setup-contract-abi.sh",
+    "generate:contract": "npx wagmi generate"
   },
   "engines": {
     "node": ">=22"
@@ -59,7 +61,8 @@
     "@types/lodash": "^4.17.15",
     "@types/sinon": "^17.0.3",
     "@waku/build-utils": "^1.0.0",
-    "@waku/message-encryption": "^0.0.38",
+    "@waku/message-encryption": "^0.0.37",
+    "@wagmi/cli": "^2.7.0",
     "deep-equal-in-any-order": "^2.0.6",
     "fast-check": "^3.23.2",
     "rollup-plugin-copy": "^3.5.0"
