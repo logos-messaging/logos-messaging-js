@@ -56,13 +56,13 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/chai": "^5.0.1",
     "@types/chai-spies": "^1.0.6",
-    "@waku/interfaces": "0.0.34",
     "@types/deep-equal-in-any-order": "^1.0.4",
     "@types/lodash": "^4.17.15",
     "@types/sinon": "^17.0.3",
-    "@waku/build-utils": "^1.0.0",
-    "@waku/message-encryption": "^0.0.37",
     "@wagmi/cli": "^2.7.0",
+    "@waku/build-utils": "^1.0.0",
+    "@waku/interfaces": "0.0.34",
+    "@waku/message-encryption": "^0.0.37",
     "deep-equal-in-any-order": "^2.0.6",
     "fast-check": "^3.23.2",
     "rollup-plugin-copy": "^3.5.0"
@@ -79,18 +79,19 @@
   ],
   "dependencies": {
     "@chainsafe/bls-keystore": "3.0.0",
+    "@noble/hashes": "^1.2.0",
+    "@wagmi/core": "^2.22.1",
     "@waku/core": "^0.0.40",
     "@waku/utils": "^0.0.27",
-    "@noble/hashes": "^1.2.0",
     "@waku/zerokit-rln-wasm": "^0.2.1",
-    "ethereum-cryptography": "^3.1.0",
-    "ethers": "^5.7.2",
-    "lodash": "^4.17.21",
-    "uuid": "^11.0.5",
     "chai": "^5.1.2",
     "chai-as-promised": "^8.0.1",
     "chai-spies": "^1.1.0",
     "chai-subset": "^1.6.0",
-    "sinon": "^19.0.2"
+    "ethereum-cryptography": "^3.1.0",
+    "lodash": "^4.17.21",
+    "sinon": "^19.0.2",
+    "uuid": "^11.0.5",
+    "viem": "^2.38.4"
   }
 }

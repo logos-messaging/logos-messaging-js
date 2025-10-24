@@ -1,3 +1,4 @@
 {
-  "extends": "../../tsconfig.dev"
-} 
+  "extends": "../../tsconfig.dev",
+  "exclude": ["wagmi.config.ts"]
+}

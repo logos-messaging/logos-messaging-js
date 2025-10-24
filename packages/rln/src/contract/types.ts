@@ -1,28 +1,21 @@
-import { ethers } from "ethers";
-
-export interface CustomQueryOptions extends FetchMembersOptions {
-  membersFilter: ethers.EventFilter;
-}
+import { Address, PublicClient, WalletClient } from "viem";
 
 export type Member = {
   idCommitment: string;
-  index: ethers.BigNumber;
+  index: bigint;
 };
 
 export interface RLNContractOptions {
-  signer: ethers.Signer;
-  address: string;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+  address: Address;
   rateLimit?: number;
-}
-
-export interface RLNContractInitOptions extends RLNContractOptions {
-  contract?: ethers.Contract;
 }
 
 export interface MembershipRegisteredEvent {
   idCommitment: string;
-  membershipRateLimit: ethers.BigNumber;
-  index: ethers.BigNumber;
+  membershipRateLimit: bigint;
+  index: bigint;
 }
 
 export type FetchMembersOptions = {
@@ -32,13 +25,13 @@ export type FetchMembersOptions = {
 };
 
 export interface MembershipInfo {
-  index: ethers.BigNumber;
+  index: number;
   idCommitment: string;
   rateLimit: number;
   startBlock: number;
   endBlock: number;
   state: MembershipState;
-  depositAmount: ethers.BigNumber;
+  depositAmount: bigint;
   activeDuration: number;
   gracePeriodDuration: number;
   holder: string;
