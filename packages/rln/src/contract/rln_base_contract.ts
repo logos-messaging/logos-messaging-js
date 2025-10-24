@@ -3,10 +3,18 @@ import {
   type Address,
   decodeEventLog,
   getContract,
+<<<<<<< HEAD
   type GetContractReturnType,
   type Hash,
   type PublicClient,
   type WalletClient
+=======
+  GetContractEventsReturnType,
+  GetContractReturnType,
+  type Hash,
+  PublicClient,
+  WalletClient
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
 } from "viem";
 
 import { IdentityCredential } from "../identity.js";
@@ -19,6 +27,11 @@ import {
   RLN_CONTRACT
 } from "./constants.js";
 import {
+<<<<<<< HEAD
+=======
+  FetchMembersOptions,
+  Member,
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
   MembershipInfo,
   MembershipState,
   RLNContractOptions
@@ -27,20 +40,36 @@ import { iPriceCalculatorAbi, wakuRlnV2Abi } from "./wagmi/generated.js";
 
 const log = new Logger("rln:contract:base");
 
+type MembershipEvents = GetContractEventsReturnType<
+  typeof wakuRlnV2Abi,
+  "MembershipRegistered" | "MembershipErased" | "MembershipExpired"
+>;
 export class RLNBaseContract {
   public contract: GetContractReturnType<
     typeof wakuRlnV2Abi,
     PublicClient | WalletClient
   >;
+<<<<<<< HEAD
   public rpcClient: RpcClient;
+=======
+  public publicClient: PublicClient;
+  public walletClient: WalletClient;
+  private deployBlock: undefined | number;
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
   private rateLimit: number;
   private minRateLimit?: number;
   private maxRateLimit?: number;
 
+<<<<<<< HEAD
+=======
+  protected _members: Map<number, Member> = new Map();
+
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
   /**
    * Private constructor for RLNBaseContract. Use static create() instead.
    */
   protected constructor(options: RLNContractOptions) {
+<<<<<<< HEAD
     const { address, rpcClient, rateLimit = DEFAULT_RATE_LIMIT } = options;
 
     log.info("Initializing RLNBaseContract", { address, rateLimit });
@@ -52,6 +81,34 @@ export class RLNBaseContract {
       client: this.rpcClient
     });
     this.rateLimit = rateLimit;
+=======
+    const {
+      address,
+      publicClient,
+      walletClient,
+      rateLimit = DEFAULT_RATE_LIMIT
+    } = options;
+
+    log.info("Initializing RLNBaseContract", { address, rateLimit });
+
+    this.publicClient = publicClient;
+    this.walletClient = walletClient;
+    this.contract = getContract({
+      address,
+      abi: wakuRlnV2Abi,
+      client: { wallet: walletClient, public: publicClient }
+    });
+    this.rateLimit = rateLimit;
+
+    // Initialize members and subscriptions
+    this.fetchMembers()
+      .then(() => {
+        this.subscribeToMembers();
+      })
+      .catch((error) => {
+        log.error("Failed to initialize members", { error });
+      });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
   }
 
   /**
@@ -62,6 +119,11 @@ export class RLNBaseContract {
   ): Promise<RLNBaseContract> {
     const instance = new RLNBaseContract(options);
 
+<<<<<<< HEAD
+=======
+    instance.deployBlock = await instance.contract.read.deployedBlockNumber();
+
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     const [min, max] = await Promise.all([
       instance.contract.read.minMembershipRateLimit(),
       instance.contract.read.maxMembershipRateLimit()
@@ -149,6 +211,18 @@ export class RLNBaseContract {
    */
   public async getMerkleRoot(): Promise<bigint> {
     return this.contract.read.root();
+<<<<<<< HEAD
+  }
+
+  /**
+   * Gets the Merkle proof for a member at a given index
+   * @param index The index of the member in the membership set
+   * @returns Promise<bigint[]> Array of 20 Merkle proof elements
+   *
+   */
+  public async getMerkleProof(index: number): Promise<readonly bigint[]> {
+    return await this.contract.read.getMerkleProof([index]);
+=======
   }
 
   /**
@@ -161,6 +235,145 @@ export class RLNBaseContract {
     return await this.contract.read.getMerkleProof([index]);
   }
 
+  public get members(): Member[] {
+    const sortedMembers = Array.from(this._members.values()).sort(
+      (left, right) => Number(left.index) - Number(right.index)
+    );
+    return sortedMembers;
+  }
+
+  public async fetchMembers(options: FetchMembersOptions = {}): Promise<void> {
+    const fromBlock = options.fromBlock
+      ? BigInt(options.fromBlock!)
+      : BigInt(this.deployBlock!);
+    const registeredMemberEvents =
+      await this.contract.getEvents.MembershipRegistered({
+        fromBlock,
+        toBlock: fromBlock + BigInt(options.fetchRange!)
+      });
+    const removedMemberEvents = await this.contract.getEvents.MembershipErased({
+      fromBlock,
+      toBlock: fromBlock + BigInt(options.fetchRange!)
+    });
+    const expiredMemberEvents = await this.contract.getEvents.MembershipExpired(
+      {
+        fromBlock,
+        toBlock: fromBlock + BigInt(options.fetchRange!)
+      }
+    );
+
+    const events = [
+      ...registeredMemberEvents,
+      ...removedMemberEvents,
+      ...expiredMemberEvents
+    ];
+    this.processEvents(events);
+  }
+
+  public processEvents(events: MembershipEvents): void {
+    const toRemoveTable = new Map<number, number[]>();
+    const toInsertTable = new Map<number, MembershipEvents>();
+
+    events.forEach((evt) => {
+      if (!evt.args) {
+        return;
+      }
+      const blockNumber = Number(evt.blockNumber);
+      if (
+        evt.eventName === "MembershipErased" ||
+        evt.eventName === "MembershipExpired"
+      ) {
+        const index = evt.args.index;
+
+        if (!index) {
+          return;
+        }
+
+        const toRemoveVal = toRemoveTable.get(blockNumber);
+        if (toRemoveVal != undefined) {
+          toRemoveVal.push(index);
+          toRemoveTable.set(blockNumber, toRemoveVal);
+        } else {
+          toRemoveTable.set(blockNumber, [index]);
+        }
+      } else if (evt.eventName === "MembershipRegistered") {
+        let eventsPerBlock = toInsertTable.get(blockNumber);
+        if (eventsPerBlock == undefined) {
+          eventsPerBlock = [];
+        }
+
+        eventsPerBlock.push(evt);
+        toInsertTable.set(blockNumber, eventsPerBlock);
+      }
+    });
+  }
+
+  public static splitToChunks(
+    from: number,
+    to: number,
+    step: number
+  ): Array<[number, number]> {
+    const chunks: Array<[number, number]> = [];
+
+    let left = from;
+    while (left < to) {
+      const right = left + step < to ? left + step : to;
+
+      chunks.push([left, right] as [number, number]);
+
+      left = right;
+    }
+
+    return chunks;
+  }
+
+  public static *takeN<T>(array: T[], size: number): Iterable<T[]> {
+    let start = 0;
+
+    while (start < array.length) {
+      const portion = array.slice(start, start + size);
+
+      yield portion;
+
+      start += size;
+    }
+  }
+
+  public static async ignoreErrors<T>(
+    promise: Promise<T>,
+    defaultValue: T
+  ): Promise<T> {
+    try {
+      return await promise;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        log.info(`Ignoring an error during query: ${err.message}`);
+      } else {
+        log.info(`Ignoring an unknown error during query`);
+      }
+      return defaultValue;
+    }
+  }
+
+  public subscribeToMembers(): void {
+    this.contract.watchEvent.MembershipRegistered({
+      onLogs: (logs) => {
+        this.processEvents(logs);
+      }
+    });
+    this.contract.watchEvent.MembershipExpired({
+      onLogs: (logs) => {
+        this.processEvents(logs);
+      }
+    });
+    this.contract.watchEvent.MembershipErased({
+      onLogs: (logs) => {
+        this.processEvents(logs);
+      }
+    });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
+  }
+
   public async getMembershipInfo(
     idCommitmentBigInt: bigint
   ): Promise<MembershipInfo | undefined> {
@@ -169,7 +382,11 @@ export class RLNBaseContract {
         idCommitmentBigInt
       ]);
 
+<<<<<<< HEAD
       const currentBlock = await this.rpcClient.getBlockNumber();
+=======
+      const currentBlock = await this.publicClient.getBlockNumber();
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
 
       const [
         depositAmount,
@@ -214,15 +431,24 @@ export class RLNBaseContract {
   }
 
   public async extendMembership(idCommitmentBigInt: bigint): Promise<Hash> {
+<<<<<<< HEAD
     if (!this.rpcClient.account) {
+=======
+    if (!this.walletClient.account) {
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       throw new Error(
         "Failed to extendMembership: no account set in wallet client"
       );
     }
     try {
       await this.contract.simulate.extendMemberships([[idCommitmentBigInt]], {
+<<<<<<< HEAD
         chain: this.rpcClient.chain,
         account: this.rpcClient.account.address
+=======
+        chain: this.walletClient.chain,
+        account: this.walletClient.account!.address
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       });
     } catch (err) {
       throw new Error("Simulating extending membership failed: " + err);
@@ -230,12 +456,21 @@ export class RLNBaseContract {
     const hash = await this.contract.write.extendMemberships(
       [[idCommitmentBigInt]],
       {
+<<<<<<< HEAD
         account: this.rpcClient.account,
         chain: this.rpcClient.chain
       }
     );
 
     await this.rpcClient.waitForTransactionReceipt({ hash });
+=======
+        account: this.walletClient.account!,
+        chain: this.walletClient.chain
+      }
+    );
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     return hash;
   }
 
@@ -249,7 +484,11 @@ export class RLNBaseContract {
     ) {
       throw new Error("Membership is not expired or in grace period");
     }
+<<<<<<< HEAD
     if (!this.rpcClient.account) {
+=======
+    if (!this.walletClient.account) {
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       throw new Error(
         "Failed to eraseMembership: no account set in wallet client"
       );
@@ -259,8 +498,13 @@ export class RLNBaseContract {
       await this.contract.simulate.eraseMemberships(
         [[idCommitmentBigInt], eraseFromMembershipSet],
         {
+<<<<<<< HEAD
           chain: this.rpcClient.chain,
           account: this.rpcClient.account.address
+=======
+          chain: this.walletClient.chain,
+          account: this.walletClient.account!.address
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
         }
       );
     } catch (err) {
@@ -270,11 +514,19 @@ export class RLNBaseContract {
     const hash = await this.contract.write.eraseMemberships(
       [[idCommitmentBigInt], eraseFromMembershipSet],
       {
+<<<<<<< HEAD
         chain: this.rpcClient.chain,
         account: this.rpcClient.account
       }
     );
     await this.rpcClient.waitForTransactionReceipt({ hash });
+=======
+        chain: this.walletClient.chain,
+        account: this.walletClient.account!
+      }
+    );
+    await this.publicClient.waitForTransactionReceipt({ hash });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     return hash;
   }
 
@@ -290,7 +542,11 @@ export class RLNBaseContract {
         `Rate limit must be between ${RATE_LIMIT_PARAMS.MIN_RATE} and ${RATE_LIMIT_PARAMS.MAX_RATE}`
       );
     }
+<<<<<<< HEAD
     if (!this.rpcClient.account) {
+=======
+    if (!this.walletClient.account) {
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       throw new Error(
         "Failed to registerMembership: no account set in wallet client"
       );
@@ -299,8 +555,13 @@ export class RLNBaseContract {
       await this.contract.simulate.register(
         [idCommitmentBigInt, rateLimit, []],
         {
+<<<<<<< HEAD
           chain: this.rpcClient.chain,
           account: this.rpcClient.account.address
+=======
+          chain: this.walletClient.chain,
+          account: this.walletClient.account!.address
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
         }
       );
     } catch (err) {
@@ -310,15 +571,24 @@ export class RLNBaseContract {
     const hash = await this.contract.write.register(
       [idCommitmentBigInt, rateLimit, []],
       {
+<<<<<<< HEAD
         chain: this.rpcClient.chain,
         account: this.rpcClient.account
       }
     );
     await this.rpcClient.waitForTransactionReceipt({ hash });
+=======
+        chain: this.walletClient.chain,
+        account: this.walletClient.account!
+      }
+    );
+    await this.publicClient.waitForTransactionReceipt({ hash });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     return hash;
   }
 
   /**
+<<<<<<< HEAD
    * Withdraw deposited tokens after membership is erased.
    * The smart contract validates that the sender is the holder of the membership,
    * and will only send tokens to that address.
@@ -326,24 +596,45 @@ export class RLNBaseContract {
    */
   public async withdraw(token: string): Promise<Hash> {
     if (!this.rpcClient.account) {
+=======
+   * Withdraw deposited tokens after membership is erased
+   * @param token - Token address to withdraw
+   * NOTE: Funds are sent to msg.sender (the walletClient's address)
+   */
+  public async withdraw(token: string): Promise<Hash> {
+    if (!this.walletClient.account) {
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       throw new Error("Failed to withdraw: no account set in wallet client");
     }
 
     try {
       await this.contract.simulate.withdraw([token as Address], {
+<<<<<<< HEAD
         chain: this.rpcClient.chain,
         account: this.rpcClient.account.address
+=======
+        chain: this.walletClient.chain,
+        account: this.walletClient.account!.address
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       });
     } catch (err) {
       throw new Error("Error simulating withdraw: " + err);
     }
 
     const hash = await this.contract.write.withdraw([token as Address], {
+<<<<<<< HEAD
       chain: this.rpcClient.chain,
       account: this.rpcClient.account
     });
 
     await this.rpcClient.waitForTransactionReceipt({ hash });
+=======
+      chain: this.walletClient.chain,
+      account: this.walletClient.account!
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     return hash;
   }
   public async registerWithIdentity(
@@ -381,14 +672,20 @@ export class RLNBaseContract {
       await this.contract.simulate.register(
         [identity.IDCommitmentBigInt, this.rateLimit, []],
         {
+<<<<<<< HEAD
           chain: this.rpcClient.chain,
           account: this.rpcClient.account.address
+=======
+          chain: this.walletClient.chain,
+          account: this.walletClient.account!.address
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
         }
       );
 
       const hash: Hash = await this.contract.write.register(
         [identity.IDCommitmentBigInt, this.rateLimit, []],
         {
+<<<<<<< HEAD
           chain: this.rpcClient.chain,
           account: this.rpcClient.account
         }
@@ -397,6 +694,17 @@ export class RLNBaseContract {
       const txRegisterReceipt = await this.rpcClient.waitForTransactionReceipt({
         hash
       });
+=======
+          chain: this.walletClient.chain,
+          account: this.walletClient.account!
+        }
+      );
+
+      const txRegisterReceipt =
+        await this.publicClient.waitForTransactionReceipt({
+          hash
+        });
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
 
       if (txRegisterReceipt.status === "reverted") {
         throw new Error("Transaction failed on-chain");
@@ -427,6 +735,7 @@ export class RLNBaseContract {
       const decoded = decodeEventLog({
         abi: wakuRlnV2Abi,
         data: memberRegisteredLog.data,
+<<<<<<< HEAD
         topics: memberRegisteredLog.topics,
         eventName: "MembershipRegistered"
       });
@@ -434,15 +743,35 @@ export class RLNBaseContract {
       log.info(
         `Successfully registered membership with index ${decoded.args.index} ` +
           `and rate limit ${decoded.args.membershipRateLimit}`
+=======
+        topics: memberRegisteredLog.topics
+      });
+
+      const decodedArgs = decoded.args as {
+        idCommitment: bigint;
+        membershipRateLimit: number;
+        index: number;
+      };
+
+      log.info(
+        `Successfully registered membership with index ${decodedArgs.index} ` +
+          `and rate limit ${decodedArgs.membershipRateLimit}`
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       );
 
       return {
         identity,
         membership: {
           address: this.contract.address,
+<<<<<<< HEAD
           treeIndex: decoded.args.index,
           chainId: String(RLN_CONTRACT.chainId),
           rateLimit: Number(decoded.args.membershipRateLimit)
+=======
+          treeIndex: decodedArgs.index,
+          chainId: String(RLN_CONTRACT.chainId),
+          rateLimit: decodedArgs.membershipRateLimit
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
         }
       };
     } catch (error) {
@@ -491,7 +820,10 @@ export class RLNBaseContract {
   }
 
   private async getMemberIndex(idCommitmentBigInt: bigint): Promise<number> {
+<<<<<<< HEAD
     // Current version of the contract has the index at position 5 in the membership struct
+=======
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
     return (await this.contract.read.memberships([idCommitmentBigInt]))[5];
   }
 
@@ -546,7 +878,11 @@ export class RLNBaseContract {
     price: bigint | null;
   }> {
     const address = await this.contract.read.priceCalculator();
+<<<<<<< HEAD
     const [token, price] = await this.rpcClient.readContract({
+=======
+    const [token, price] = await this.publicClient.readContract({
+>>>>>>> a88dd8cdbd (feat: migrate rln from ethers to viem)
       address,
       abi: iPriceCalculatorAbi,
       functionName: "calculate",
