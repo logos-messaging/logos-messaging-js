@@ -12,6 +12,14 @@ This package provides RLN functionality for the Waku protocol, enabling rate-lim
 npm install @waku/rln
 ```
 
+## Smart Contract Type Generation
+
+We use `wagmi` to generate TypeScript bindings for interacting with the RLN smart contracts. When changes are pushed to the `waku-rlnv2-contract` repository, run the following script to fetch and build the latest contracts and generate the TypeScript bindings:
+
+```
+./generate_contract_abi.sh
+```
+
 ## Usage
 
 ```typescript
@@ -19,11 +27,6 @@ import { RLN } from '@waku/rln';
 
 // Usage examples coming soon
 ```
-
-## Constants
-
-- Implementation contract: 0xde2260ca49300357d5af4153cda0d18f7b3ea9b3
-- Proxy contract: 0xb9cd878c90e49f797b4431fbf4fb333108cb90e6
 
 ## License
 

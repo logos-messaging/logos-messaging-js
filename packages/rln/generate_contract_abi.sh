@@ -3,7 +3,6 @@
 set -e
 
 # Script to generate contract ABIs from waku-rlnv2-contract
-# Usage: ./generate_contract_abi.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTRACT_DIR="$SCRIPT_DIR/waku-rlnv2-contract"
