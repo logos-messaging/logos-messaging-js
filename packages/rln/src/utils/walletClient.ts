@@ -5,11 +5,11 @@ import {
   PublicClient,
   WalletClient
 } from "viem";
-import { type Chain, lineaSepolia } from "viem/chains";
+import { lineaSepolia } from "viem/chains";
 
-export const createViemClientFromWindow = async (
-  chain: Chain = lineaSepolia
-): Promise<WalletClient & PublicClient> => {
+export const createViemClientFromWindow = async (): Promise<
+  WalletClient & PublicClient
+> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ethereum = (window as any).ethereum;
 
@@ -23,9 +23,26 @@ export const createViemClientFromWindow = async (
 
   const rpcClient = createWalletClient({
     account,
-    chain,
+    chain: lineaSepolia,
     transport: custom(ethereum)
   }).extend(publicActions);
+
+  // Ensure wallet is connected to Linea Sepolia
+  try {
+    await rpcClient.switchChain({ id: lineaSepolia.id });
+  } catch (error: unknown) {
+    // This error code indicates that the chain has not been added to the wallet
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 4902
+    ) {
+      await rpcClient.addChain({ chain: lineaSepolia });
+    } else {
+      throw error;
+    }
+  }
 
   return rpcClient;
 };
