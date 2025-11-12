@@ -3,7 +3,6 @@ import {
   type Address,
   decodeEventLog,
   getContract,
-  GetContractEventsReturnType,
   GetContractReturnType,
   type Hash,
   publicActions,
@@ -20,8 +19,6 @@ import {
   RLN_CONTRACT
 } from "./constants.js";
 import {
-  FetchMembersOptions,
-  Member,
   MembershipInfo,
   MembershipState,
   RLNContractOptions
@@ -30,22 +27,15 @@ import { iPriceCalculatorAbi, wakuRlnV2Abi } from "./wagmi/generated.js";
 
 const log = new Logger("rln:contract:base");
 
-type MembershipEvents = GetContractEventsReturnType<
-  typeof wakuRlnV2Abi,
-  "MembershipRegistered" | "MembershipErased" | "MembershipExpired"
->;
 export class RLNBaseContract {
   public contract: GetContractReturnType<
     typeof wakuRlnV2Abi,
     PublicClient | WalletClient
   >;
   public rpcClient: WalletClient & PublicClient;
-  private deployBlock: undefined | number;
   private rateLimit: number;
   private minRateLimit?: number;
   private maxRateLimit?: number;
-
-  protected _members: Map<number, Member> = new Map();
 
   /**
    * Private constructor for RLNBaseContract. Use static create() instead.
@@ -63,15 +53,6 @@ export class RLNBaseContract {
       client: this.rpcClient
     });
     this.rateLimit = rateLimit;
-
-    // Initialize members and subscriptions
-    this.fetchMembers()
-      .then(() => {
-        this.subscribeToMembers();
-      })
-      .catch((error) => {
-        log.error("Failed to initialize members", { error });
-      });
   }
 
   /**
@@ -81,8 +62,6 @@ export class RLNBaseContract {
     options: RLNContractOptions
   ): Promise<RLNBaseContract> {
     const instance = new RLNBaseContract(options);
-
-    instance.deployBlock = await instance.contract.read.deployedBlockNumber();
 
     const [min, max] = await Promise.all([
       instance.contract.read.minMembershipRateLimit(),
@@ -181,144 +160,6 @@ export class RLNBaseContract {
    */
   public async getMerkleProof(index: number): Promise<readonly bigint[]> {
     return await this.contract.read.getMerkleProof([index]);
-  }
-
-  public get members(): Member[] {
-    const sortedMembers = Array.from(this._members.values()).sort(
-      (left, right) => Number(left.index) - Number(right.index)
-    );
-    return sortedMembers;
-  }
-
-  public async fetchMembers(options: FetchMembersOptions = {}): Promise<void> {
-    const fromBlock = options.fromBlock
-      ? BigInt(options.fromBlock!)
-      : BigInt(this.deployBlock!);
-    const registeredMemberEvents =
-      await this.contract.getEvents.MembershipRegistered({
-        fromBlock,
-        toBlock: fromBlock + BigInt(options.fetchRange!)
-      });
-    const removedMemberEvents = await this.contract.getEvents.MembershipErased({
-      fromBlock,
-      toBlock: fromBlock + BigInt(options.fetchRange!)
-    });
-    const expiredMemberEvents = await this.contract.getEvents.MembershipExpired(
-      {
-        fromBlock,
-        toBlock: fromBlock + BigInt(options.fetchRange!)
-      }
-    );
-
-    const events = [
-      ...registeredMemberEvents,
-      ...removedMemberEvents,
-      ...expiredMemberEvents
-    ];
-    this.processEvents(events);
-  }
-
-  public processEvents(events: MembershipEvents): void {
-    const toRemoveTable = new Map<number, number[]>();
-    const toInsertTable = new Map<number, MembershipEvents>();
-
-    events.forEach((evt) => {
-      if (!evt.args) {
-        return;
-      }
-      const blockNumber = Number(evt.blockNumber);
-      if (
-        evt.eventName === "MembershipErased" ||
-        evt.eventName === "MembershipExpired"
-      ) {
-        const index = evt.args.index;
-
-        if (!index) {
-          return;
-        }
-
-        const toRemoveVal = toRemoveTable.get(blockNumber);
-        if (toRemoveVal != undefined) {
-          toRemoveVal.push(index);
-          toRemoveTable.set(blockNumber, toRemoveVal);
-        } else {
-          toRemoveTable.set(blockNumber, [index]);
-        }
-      } else if (evt.eventName === "MembershipRegistered") {
-        let eventsPerBlock = toInsertTable.get(blockNumber);
-        if (eventsPerBlock == undefined) {
-          eventsPerBlock = [];
-        }
-
-        eventsPerBlock.push(evt);
-        toInsertTable.set(blockNumber, eventsPerBlock);
-      }
-    });
-  }
-
-  public static splitToChunks(
-    from: number,
-    to: number,
-    step: number
-  ): Array<[number, number]> {
-    const chunks: Array<[number, number]> = [];
-
-    let left = from;
-    while (left < to) {
-      const right = left + step < to ? left + step : to;
-
-      chunks.push([left, right] as [number, number]);
-
-      left = right;
-    }
-
-    return chunks;
-  }
-
-  public static *takeN<T>(array: T[], size: number): Iterable<T[]> {
-    let start = 0;
-
-    while (start < array.length) {
-      const portion = array.slice(start, start + size);
-
-      yield portion;
-
-      start += size;
-    }
-  }
-
-  public static async ignoreErrors<T>(
-    promise: Promise<T>,
-    defaultValue: T
-  ): Promise<T> {
-    try {
-      return await promise;
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        log.info(`Ignoring an error during query: ${err.message}`);
-      } else {
-        log.info(`Ignoring an unknown error during query`);
-      }
-      return defaultValue;
-    }
-  }
-
-  public subscribeToMembers(): void {
-    this.contract.watchEvent.MembershipRegistered({
-      onLogs: (logs) => {
-        this.processEvents(logs);
-      }
-    });
-    this.contract.watchEvent.MembershipExpired({
-      onLogs: (logs) => {
-        this.processEvents(logs);
-      }
-    });
-    this.contract.watchEvent.MembershipErased({
-      onLogs: (logs) => {
-        this.processEvents(logs);
-      }
-    });
   }
 
   public async getMembershipInfo(
