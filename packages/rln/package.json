@@ -44,7 +44,7 @@
     "watch:test": "mocha --watch",
     "prepublish": "npm run build",
     "reset-hard": "git clean -dfx -e .idea && git reset --hard && npm i && npm run build",
-    "setup:contract-abi": "./setup-contract-abi.sh",
+    "setup:contract-abi": "./generate_contract_abi.sh",
     "generate:contract": "npx wagmi generate"
   },
   "engines": {
