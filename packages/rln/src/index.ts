@@ -4,7 +4,7 @@ import { createRLN } from "./create.js";
 import { IdentityCredential } from "./identity.js";
 import { Keystore } from "./keystore/index.js";
 import { RLNInstance } from "./rln.js";
-import { createViemClientsFromWindow } from "./utils/index.js";
+import { createViemClientFromWindow } from "./utils/index.js";
 
 export {
   RLNBaseContract,
@@ -13,7 +13,7 @@ export {
   RLNInstance,
   IdentityCredential,
   RLN_CONTRACT,
-  createViemClientsFromWindow as extractMetaMaskSigner
+  createViemClientFromWindow
 };
 
 // Export wagmi-generated ABIs

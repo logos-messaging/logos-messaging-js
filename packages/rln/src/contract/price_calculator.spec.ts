@@ -1,7 +1,6 @@
 import { expect, use } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import { PublicClient } from "viem";
 
 import { RLNBaseContract } from "./rln_base_contract.js";
 
@@ -9,17 +8,17 @@ use(chaiAsPromised);
 
 function createMockRLNBaseContract(
   mockContract: any,
-  mockPublicClient: PublicClient
+  mockRpcClient: any
 ): RLNBaseContract {
   const dummy = Object.create(RLNBaseContract.prototype);
   dummy.contract = mockContract;
-  dummy.publicClient = mockPublicClient;
+  dummy.rpcClient = mockRpcClient;
   return dummy as RLNBaseContract;
 }
 
 describe("RLNBaseContract.getPriceForRateLimit (unit)", function () {
   let mockContract: any;
-  let mockPublicClient: any;
+  let mockRpcClient: any;
   let priceCalculatorReadStub: sinon.SinonStub;
   let readContractStub: sinon.SinonStub;
 
@@ -33,7 +32,7 @@ describe("RLNBaseContract.getPriceForRateLimit (unit)", function () {
       }
     };
 
-    mockPublicClient = {
+    mockRpcClient = {
       readContract: readContractStub
     };
   });
@@ -50,7 +49,7 @@ describe("RLNBaseContract.getPriceForRateLimit (unit)", function () {
     priceCalculatorReadStub.resolves(priceCalculatorAddress);
     readContractStub.resolves([fakeToken, fakePrice]);
 
-    const rlnBase = createMockRLNBaseContract(mockContract, mockPublicClient);
+    const rlnBase = createMockRLNBaseContract(mockContract, mockRpcClient);
     const result = await rlnBase.getPriceForRateLimit(20);
 
     expect(result.token).to.equal(fakeToken);
@@ -72,7 +71,7 @@ describe("RLNBaseContract.getPriceForRateLimit (unit)", function () {
     priceCalculatorReadStub.resolves(priceCalculatorAddress);
     readContractStub.rejects(new Error("fail"));
 
-    const rlnBase = createMockRLNBaseContract(mockContract, mockPublicClient);
+    const rlnBase = createMockRLNBaseContract(mockContract, mockRpcClient);
     await expect(rlnBase.getPriceForRateLimit(20)).to.be.rejectedWith("fail");
 
     expect(priceCalculatorReadStub.calledOnce).to.be.true;
@@ -85,7 +84,7 @@ describe("RLNBaseContract.getPriceForRateLimit (unit)", function () {
     priceCalculatorReadStub.resolves(priceCalculatorAddress);
     readContractStub.resolves([null, null]);
 
-    const rlnBase = createMockRLNBaseContract(mockContract, mockPublicClient);
+    const rlnBase = createMockRLNBaseContract(mockContract, mockRpcClient);
     const result = await rlnBase.getPriceForRateLimit(20);
 
     expect(result.token).to.be.null;

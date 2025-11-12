@@ -1,15 +1,15 @@
 import {
-  createPublicClient,
   createWalletClient,
   custom,
+  publicActions,
   PublicClient,
   WalletClient
 } from "viem";
 import { type Chain, lineaSepolia } from "viem/chains";
 
-export const createViemClientsFromWindow = async (
+export const createViemClientFromWindow = async (
   chain: Chain = lineaSepolia
-): Promise<{ walletClient: WalletClient; publicClient: PublicClient }> => {
+): Promise<WalletClient & PublicClient> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ethereum = (window as any).ethereum;
 
@@ -21,16 +21,11 @@ export const createViemClientsFromWindow = async (
 
   const [account] = await ethereum.request({ method: "eth_requestAccounts" });
 
-  const walletClient = createWalletClient({
+  const rpcClient = createWalletClient({
     account,
     chain,
     transport: custom(ethereum)
-  });
+  }).extend(publicActions);
 
-  const publicClient = createPublicClient({
-    chain,
-    transport: custom(ethereum)
-  });
-
-  return { walletClient, publicClient };
+  return rpcClient;
 };

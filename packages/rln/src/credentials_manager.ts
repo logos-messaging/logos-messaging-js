@@ -1,5 +1,5 @@
 import { Logger } from "@waku/utils";
-import { PublicClient, WalletClient } from "viem";
+import { publicActions, PublicClient, WalletClient } from "viem";
 
 import { RLN_CONTRACT } from "./contract/constants.js";
 import { RLNBaseContract } from "./contract/rln_base_contract.js";
@@ -10,7 +10,7 @@ import type {
 } from "./keystore/index.js";
 import { KeystoreEntity, Password } from "./keystore/types.js";
 import { RegisterMembershipOptions, StartRLNOptions } from "./types.js";
-import { createViemClientsFromWindow } from "./utils/index.js";
+import { createViemClientFromWindow } from "./utils/index.js";
 import { Zerokit } from "./zerokit.js";
 
 const log = new Logger("rln:credentials");
@@ -24,8 +24,7 @@ export class RLNCredentialsManager {
   protected starting = false;
 
   public contract: undefined | RLNBaseContract;
-  public walletClient: undefined | WalletClient;
-  public publicClient: undefined | PublicClient;
+  public rpcClient: undefined | (WalletClient & PublicClient);
 
   protected keystore = Keystore.create();
   public credentials: undefined | DecryptedCredentials;
@@ -56,7 +55,7 @@ export class RLNCredentialsManager {
         log.info("Credentials successfully decrypted");
       }
 
-      const { walletClient, publicClient, address, rateLimit } =
+      const { rpcClient, address, rateLimit } =
         await this.determineStartOptions(options, credentials);
 
       log.info(`Using contract address: ${address}`);
@@ -67,12 +66,10 @@ export class RLNCredentialsManager {
       }
 
       this.credentials = credentials;
-      this.walletClient = walletClient!;
-      this.publicClient = publicClient!;
+      this.rpcClient = rpcClient!;
       this.contract = await RLNBaseContract.create({
         address: address! as `0x${string}`,
-        publicClient: publicClient!,
-        walletClient: walletClient!,
+        rpcClient: this.rpcClient,
         rateLimit: rateLimit ?? this.zerokit.rateLimit
       });
 
@@ -131,9 +128,7 @@ export class RLNCredentialsManager {
   protected async determineStartOptions(
     options: StartRLNOptions,
     credentials: KeystoreEntity | undefined
-  ): Promise<
-    StartRLNOptions & { walletClient: WalletClient; publicClient: PublicClient }
-  > {
+  ): Promise<StartRLNOptions & { rpcClient: WalletClient & PublicClient }> {
     let chainId = credentials?.membership.chainId;
     const address =
       credentials?.membership.address ||
@@ -145,21 +140,16 @@ export class RLNCredentialsManager {
       log.info(`Using Linea contract with chainId: ${chainId}`);
     }
 
-    const walletClient = options.walletClient;
-    const publicClient = options.publicClient;
-
-    let clients: { walletClient: WalletClient; publicClient: PublicClient };
-
-    if (!walletClient || !publicClient) {
-      clients = await createViemClientsFromWindow();
-    } else {
-      clients = { walletClient, publicClient };
+    let rpcClient: (WalletClient & PublicClient) | undefined =
+      options.rpcClient?.extend(publicActions) as WalletClient & PublicClient;
+    if (!rpcClient) {
+      rpcClient = await createViemClientFromWindow();
     }
 
-    const currentChainId = await clients.publicClient.getChainId();
+    const currentChainId = rpcClient.chain?.id;
     log.info(`Current chain ID: ${currentChainId}`);
 
-    if (chainId && chainId !== currentChainId.toString()) {
+    if (chainId && chainId !== currentChainId?.toString()) {
       log.error(
         `Chain ID mismatch: contract=${chainId}, current=${currentChainId}`
       );
@@ -169,8 +159,7 @@ export class RLNCredentialsManager {
     }
 
     return {
-      walletClient: clients.walletClient,
-      publicClient: clients.publicClient,
+      rpcClient,
       address
     };
   }
@@ -216,9 +205,9 @@ export class RLNCredentialsManager {
   protected async verifyCredentialsAgainstContract(
     credentials: KeystoreEntity
   ): Promise<void> {
-    if (!this.contract || !this.publicClient) {
+    if (!this.contract || !this.rpcClient) {
       throw Error(
-        "Failed to verify chain coordinates: no contract or publicClient initialized."
+        "Failed to verify chain coordinates: no contract or viem client initialized."
       );
     }
 
@@ -231,7 +220,7 @@ export class RLNCredentialsManager {
     }
 
     const chainId = credentials.membership.chainId;
-    const currentChainId = await this.publicClient.getChainId();
+    const currentChainId = await this.rpcClient.getChainId();
     if (chainId !== currentChainId.toString()) {
       throw Error(
         `Failed to verify chain coordinates: credentials chainID=${chainId} is not equal to registryContract chainID=${currentChainId}`

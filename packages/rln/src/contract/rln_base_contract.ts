@@ -6,6 +6,7 @@ import {
   GetContractEventsReturnType,
   GetContractReturnType,
   type Hash,
+  publicActions,
   PublicClient,
   WalletClient
 } from "viem";
@@ -38,8 +39,7 @@ export class RLNBaseContract {
     typeof wakuRlnV2Abi,
     PublicClient | WalletClient
   >;
-  public publicClient: PublicClient;
-  public walletClient: WalletClient;
+  public rpcClient: WalletClient & PublicClient;
   private deployBlock: undefined | number;
   private rateLimit: number;
   private minRateLimit?: number;
@@ -51,21 +51,16 @@ export class RLNBaseContract {
    * Private constructor for RLNBaseContract. Use static create() instead.
    */
   protected constructor(options: RLNContractOptions) {
-    const {
-      address,
-      publicClient,
-      walletClient,
-      rateLimit = DEFAULT_RATE_LIMIT
-    } = options;
+    const { address, rpcClient, rateLimit = DEFAULT_RATE_LIMIT } = options;
 
     log.info("Initializing RLNBaseContract", { address, rateLimit });
 
-    this.publicClient = publicClient;
-    this.walletClient = walletClient;
+    this.rpcClient = rpcClient.extend(publicActions) as WalletClient &
+      PublicClient;
     this.contract = getContract({
       address,
       abi: wakuRlnV2Abi,
-      client: { wallet: walletClient, public: publicClient }
+      client: this.rpcClient
     });
     this.rateLimit = rateLimit;
 
@@ -334,7 +329,7 @@ export class RLNBaseContract {
         idCommitmentBigInt
       ]);
 
-      const currentBlock = await this.publicClient.getBlockNumber();
+      const currentBlock = await this.rpcClient.getBlockNumber();
 
       const [
         depositAmount,
@@ -379,15 +374,15 @@ export class RLNBaseContract {
   }
 
   public async extendMembership(idCommitmentBigInt: bigint): Promise<Hash> {
-    if (!this.walletClient.account) {
+    if (!this.rpcClient.account) {
       throw new Error(
         "Failed to extendMembership: no account set in wallet client"
       );
     }
     try {
       await this.contract.simulate.extendMemberships([[idCommitmentBigInt]], {
-        chain: this.walletClient.chain,
-        account: this.walletClient.account!.address
+        chain: this.rpcClient.chain,
+        account: (this.rpcClient as WalletClient).account!.address
       });
     } catch (err) {
       throw new Error("Simulating extending membership failed: " + err);
@@ -395,12 +390,12 @@ export class RLNBaseContract {
     const hash = await this.contract.write.extendMemberships(
       [[idCommitmentBigInt]],
       {
-        account: this.walletClient.account!,
-        chain: this.walletClient.chain
+        account: this.rpcClient.account!,
+        chain: this.rpcClient.chain
       }
     );
 
-    await this.publicClient.waitForTransactionReceipt({ hash });
+    await this.rpcClient.waitForTransactionReceipt({ hash });
     return hash;
   }
 
@@ -414,7 +409,7 @@ export class RLNBaseContract {
     ) {
       throw new Error("Membership is not expired or in grace period");
     }
-    if (!this.walletClient.account) {
+    if (!this.rpcClient.account) {
       throw new Error(
         "Failed to eraseMembership: no account set in wallet client"
       );
@@ -424,8 +419,8 @@ export class RLNBaseContract {
       await this.contract.simulate.eraseMemberships(
         [[idCommitmentBigInt], eraseFromMembershipSet],
         {
-          chain: this.walletClient.chain,
-          account: this.walletClient.account!.address
+          chain: this.rpcClient.chain,
+          account: (this.rpcClient as WalletClient).account!.address
         }
       );
     } catch (err) {
@@ -435,11 +430,11 @@ export class RLNBaseContract {
     const hash = await this.contract.write.eraseMemberships(
       [[idCommitmentBigInt], eraseFromMembershipSet],
       {
-        chain: this.walletClient.chain,
-        account: this.walletClient.account!
+        chain: this.rpcClient.chain,
+        account: this.rpcClient.account!
       }
     );
-    await this.publicClient.waitForTransactionReceipt({ hash });
+    await this.rpcClient.waitForTransactionReceipt({ hash });
     return hash;
   }
 
@@ -455,7 +450,7 @@ export class RLNBaseContract {
         `Rate limit must be between ${RATE_LIMIT_PARAMS.MIN_RATE} and ${RATE_LIMIT_PARAMS.MAX_RATE}`
       );
     }
-    if (!this.walletClient.account) {
+    if (!this.rpcClient.account) {
       throw new Error(
         "Failed to registerMembership: no account set in wallet client"
       );
@@ -464,8 +459,8 @@ export class RLNBaseContract {
       await this.contract.simulate.register(
         [idCommitmentBigInt, rateLimit, []],
         {
-          chain: this.walletClient.chain,
-          account: this.walletClient.account!.address
+          chain: this.rpcClient.chain,
+          account: (this.rpcClient as WalletClient).account!.address
         }
       );
     } catch (err) {
@@ -475,11 +470,11 @@ export class RLNBaseContract {
     const hash = await this.contract.write.register(
       [idCommitmentBigInt, rateLimit, []],
       {
-        chain: this.walletClient.chain,
-        account: this.walletClient.account!
+        chain: this.rpcClient.chain,
+        account: this.rpcClient.account!
       }
     );
-    await this.publicClient.waitForTransactionReceipt({ hash });
+    await this.rpcClient.waitForTransactionReceipt({ hash });
     return hash;
   }
 
@@ -489,25 +484,25 @@ export class RLNBaseContract {
    * NOTE: Funds are sent to msg.sender (the walletClient's address)
    */
   public async withdraw(token: string): Promise<Hash> {
-    if (!this.walletClient.account) {
+    if (!this.rpcClient.account) {
       throw new Error("Failed to withdraw: no account set in wallet client");
     }
 
     try {
       await this.contract.simulate.withdraw([token as Address], {
-        chain: this.walletClient.chain,
-        account: this.walletClient.account!.address
+        chain: this.rpcClient.chain,
+        account: (this.rpcClient as WalletClient).account!.address
       });
     } catch (err) {
       throw new Error("Error simulating withdraw: " + err);
     }
 
     const hash = await this.contract.write.withdraw([token as Address], {
-      chain: this.walletClient.chain,
-      account: this.walletClient.account!
+      chain: this.rpcClient.chain,
+      account: this.rpcClient.account!
     });
 
-    await this.publicClient.waitForTransactionReceipt({ hash });
+    await this.rpcClient.waitForTransactionReceipt({ hash });
     return hash;
   }
   public async registerWithIdentity(
@@ -539,23 +534,22 @@ export class RLNBaseContract {
       await this.contract.simulate.register(
         [identity.IDCommitmentBigInt, this.rateLimit, []],
         {
-          chain: this.walletClient.chain,
-          account: this.walletClient.account!.address
+          chain: this.rpcClient.chain,
+          account: (this.rpcClient as WalletClient).account!.address
         }
       );
 
       const hash: Hash = await this.contract.write.register(
         [identity.IDCommitmentBigInt, this.rateLimit, []],
         {
-          chain: this.walletClient.chain,
-          account: this.walletClient.account!
+          chain: this.rpcClient.chain,
+          account: this.rpcClient.account!
         }
       );
 
-      const txRegisterReceipt =
-        await this.publicClient.waitForTransactionReceipt({
-          hash
-        });
+      const txRegisterReceipt = await this.rpcClient.waitForTransactionReceipt({
+        hash
+      });
 
       if (txRegisterReceipt.status === "reverted") {
         throw new Error("Transaction failed on-chain");
@@ -709,7 +703,7 @@ export class RLNBaseContract {
     price: bigint | null;
   }> {
     const address = await this.contract.read.priceCalculator();
-    const [token, price] = await this.publicClient.readContract({
+    const [token, price] = await this.rpcClient.readContract({
       address,
       abi: iPriceCalculatorAbi,
       functionName: "calculate",

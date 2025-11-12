@@ -1,4 +1,4 @@
-import { PublicClient, WalletClient } from "viem";
+import { WalletClient } from "viem";
 
 import { IdentityCredential } from "./identity.js";
 import {
@@ -10,8 +10,7 @@ export type StartRLNOptions = {
   /**
    * If not set - will attempt to create from injected provider.
    */
-  walletClient?: WalletClient;
-  publicClient?: PublicClient;
+  rpcClient?: WalletClient;
   /**
    * If not set - will use default SEPOLIA_CONTRACT address.
    */
