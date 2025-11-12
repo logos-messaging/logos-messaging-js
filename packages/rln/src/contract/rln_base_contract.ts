@@ -320,9 +320,10 @@ export class RLNBaseContract {
   }
 
   /**
-   * Withdraw deposited tokens after membership is erased
+   * Withdraw deposited tokens after membership is erased.
+   * The smart contract validates that the sender is the holder of the membership,
+   * and will only send tokens to that address.
    * @param token - Token address to withdraw
-   * NOTE: Funds are sent to msg.sender (the walletClient's address)
    */
   public async withdraw(token: string): Promise<Hash> {
     if (!this.rpcClient.account) {
