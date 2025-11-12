@@ -16,7 +16,6 @@ export {
   createViemClientFromWindow
 };
 
-// Export wagmi-generated ABIs
 export {
   wakuRlnV2Abi,
   linearPriceCalculatorAbi,

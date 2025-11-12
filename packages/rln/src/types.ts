@@ -8,7 +8,7 @@ import {
 
 export type StartRLNOptions = {
   /**
-   * If not set - will attempt to create from injected provider.
+   * If not set - will attempt to create from provider injected in window.
    */
   rpcClient?: WalletClient;
   /**
