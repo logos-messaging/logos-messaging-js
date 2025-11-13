@@ -427,27 +427,22 @@ export class RLNBaseContract {
       const decoded = decodeEventLog({
         abi: wakuRlnV2Abi,
         data: memberRegisteredLog.data,
-        topics: memberRegisteredLog.topics
+        topics: memberRegisteredLog.topics,
+        eventName: "MembershipRegistered"
       });
 
-      const decodedArgs = decoded.args as {
-        idCommitment: bigint;
-        membershipRateLimit: number;
-        index: number;
-      };
-
       log.info(
-        `Successfully registered membership with index ${decodedArgs.index} ` +
-          `and rate limit ${decodedArgs.membershipRateLimit}`
+        `Successfully registered membership with index ${decoded.args.index} ` +
+          `and rate limit ${decoded.args.membershipRateLimit}`
       );
 
       return {
         identity,
         membership: {
           address: this.contract.address,
-          treeIndex: decodedArgs.index,
+          treeIndex: decoded.args.index,
           chainId: String(RLN_CONTRACT.chainId),
-          rateLimit: decodedArgs.membershipRateLimit
+          rateLimit: Number(decoded.args.membershipRateLimit)
         }
       };
     } catch (error) {
@@ -496,6 +491,7 @@ export class RLNBaseContract {
   }
 
   private async getMemberIndex(idCommitmentBigInt: bigint): Promise<number> {
+    // Current version of the contract has the index at position 5 in the membership struct
     return (await this.contract.read.memberships([idCommitmentBigInt]))[5];
   }
 
