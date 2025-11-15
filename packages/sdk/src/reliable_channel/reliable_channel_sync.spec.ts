@@ -66,7 +66,7 @@ describe("Reliable Channel: Sync", () => {
     });
 
     while (!messageSent) {
-      await delay(50);
+      await delay(10);
     }
 
     let syncMessageSent = false;

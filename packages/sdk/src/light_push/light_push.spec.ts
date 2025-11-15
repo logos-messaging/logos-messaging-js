@@ -9,6 +9,7 @@ import { Libp2p, LightPushError, LightPushStatusCode } from "@waku/interfaces";
 import { createRoutingInfo } from "@waku/utils";
 import { utf8ToBytes } from "@waku/utils/bytes";
 import { expect } from "chai";
+import { afterEach } from "mocha";
 import sinon, { SinonSpy } from "sinon";
 
 import { PeerManager } from "../peer_manager/index.js";
@@ -36,6 +37,10 @@ describe("LightPush SDK", () => {
       routingInfo: testRoutingInfo
     });
     lightPush = mockLightPush({ libp2p });
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("should fail to send if no connected peers found", async () => {

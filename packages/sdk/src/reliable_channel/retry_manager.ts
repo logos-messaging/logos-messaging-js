@@ -39,6 +39,12 @@ export class RetryManager {
     this.retry(id, retry, 0);
   }
 
+  public stop(): void {
+    for (const timeout of this.timeouts.values()) {
+      clearTimeout(timeout);
+    }
+  }
+
   private retry(
     id: string,
     retry: () => void | Promise<void>,

@@ -27,6 +27,10 @@ describe("StreamManager", () => {
     } as any as Libp2pComponents);
   });
 
+  afterEach(() => {
+    sinon.restore();
+  });
+
   it("should return usable stream attached to connection", async () => {
     for (const writeStatus of ["ready", "writing"]) {
       const con1 = createMockConnection();

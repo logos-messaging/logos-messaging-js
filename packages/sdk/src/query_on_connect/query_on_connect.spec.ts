@@ -10,6 +10,7 @@ import {
 import { delay } from "@waku/utils";
 import { utf8ToBytes } from "@waku/utils/bytes";
 import { expect } from "chai";
+import { afterEach } from "mocha";
 import sinon from "sinon";
 
 import {
@@ -89,6 +90,10 @@ describe("QueryOnConnect", () => {
     options = {
       forceQueryThresholdMs: 10000
     };
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   describe("constructor", () => {
@@ -337,6 +342,7 @@ describe("QueryOnConnect", () => {
     });
 
     afterEach(() => {
+      sinon.restore();
       mockClock.restore();
     });
 

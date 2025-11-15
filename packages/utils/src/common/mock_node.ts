@@ -59,10 +59,11 @@ export class MockWakuNode implements IWaku {
       unsubscribe<T extends IDecodedMessage>(
         _decoders: IDecoder<T> | IDecoder<T>[]
       ): Promise<boolean> {
-        throw "Not implemented";
+        // The expectation is that it does not matter for tests
+        return Promise.resolve(true);
       },
       unsubscribeAll(): void {
-        throw "Not implemented";
+        throw "unsubscribeAll not implemented";
       }
     };
   }
@@ -138,7 +139,7 @@ export class MockWakuNode implements IWaku {
     return Promise.resolve();
   }
   public stop(): Promise<void> {
-    throw new Error("Method not implemented.");
+    return Promise.resolve();
   }
   public waitForPeers(
     _protocols?: Protocols[],

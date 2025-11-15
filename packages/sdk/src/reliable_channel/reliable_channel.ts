@@ -32,7 +32,9 @@ import {
 
 import { ReliableChannelEvent, ReliableChannelEvents } from "./events.js";
 import { MissingMessageRetriever } from "./missing_message_retriever.js";
+import { RandomTimeout } from "./random_timeout.js";
 import { RetryManager } from "./retry_manager.js";
+import { ISyncStatusEvents, SyncStatus } from "./sync_status.js";
 
 const log = new Logger("sdk:reliable-channel");
 
@@ -147,8 +149,7 @@ export class ReliableChannel<
   ) => AsyncGenerator<Promise<T | undefined>[]>;
 
   private eventListenerCleanups: Array<() => void> = [];
-  private readonly syncMinIntervalMs: number;
-  private syncTimeout: ReturnType<typeof setTimeout> | undefined;
+  private syncRandomTimeout: RandomTimeout;
   private sweepInBufInterval: ReturnType<typeof setInterval> | undefined;
   private readonly sweepInBufIntervalMs: number;
   private processTaskTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -203,8 +204,11 @@ export class ReliableChannel<
       }
     }
 
-    this.syncMinIntervalMs =
-      options?.syncMinIntervalMs ?? DEFAULT_SYNC_MIN_INTERVAL_MS;
+    this.syncRandomTimeout = new RandomTimeout(
+      options?.syncMinIntervalMs ?? DEFAULT_SYNC_MIN_INTERVAL_MS,
+      2,
+      this.sendSyncMessage.bind(this)
+    );
 
     this.sweepInBufIntervalMs =
       options?.sweepInBufIntervalMs ?? DEFAULT_SWEEP_IN_BUF_INTERVAL_MS;
@@ -234,7 +238,21 @@ export class ReliableChannel<
     }
 
     this._started = false;
+
+    this._internalSyncStatus = new SyncStatus();
+    this.syncStatus = this._internalSyncStatus;
   }
+
+  /**
+   * Emit events when the channel is aware of missing message.
+   * Note that "synced" may mean some messages are irretrievably lost.
+   * Check the emitted data for details.
+   *
+   * @emits [[StatusEvents]]
+   *
+   */
+  public readonly syncStatus: ISyncStatusEvents;
+  private readonly _internalSyncStatus: SyncStatus;
 
   public get isStarted(): boolean {
     return this._started;
@@ -492,9 +510,15 @@ export class ReliableChannel<
           });
 
         // Clear timeout once triggered
-        clearTimeout(this.processTaskTimeout);
-        this.processTaskTimeout = undefined;
+        this.clearProcessTasks();
       }, this.processTaskMinElapseMs); // we ensure that we don't call process tasks more than once per second
+    }
+  }
+
+  private clearProcessTasks(): void {
+    if (this.processTaskTimeout) {
+      clearTimeout(this.processTaskTimeout);
+      this.processTaskTimeout = undefined;
     }
   }
 
@@ -517,13 +541,10 @@ export class ReliableChannel<
     log.info("Stopping ReliableChannel...");
     this._started = false;
 
+    this.removeAllEventListeners();
     this.stopSync();
     this.stopSweepIncomingBufferLoop();
-
-    if (this.processTaskTimeout) {
-      clearTimeout(this.processTaskTimeout);
-      this.processTaskTimeout = undefined;
-    }
+    this.clearProcessTasks();
 
     if (this.activePendingProcessTask) {
       await this.activePendingProcessTask;
@@ -537,7 +558,7 @@ export class ReliableChannel<
 
     await this.unsubscribe();
 
-    this.removeAllEventListeners();
+    this._internalSyncStatus.cleanUp();
 
     log.info("ReliableChannel stopped successfully");
   }
@@ -562,32 +583,11 @@ export class ReliableChannel<
   }
 
   private restartSync(multiplier: number = 1): void {
-    if (this.syncTimeout) {
-      clearTimeout(this.syncTimeout);
-      this.syncTimeout = undefined;
-    }
-    if (this.syncMinIntervalMs) {
-      const timeoutMs = this.random() * this.syncMinIntervalMs * multiplier;
-
-      this.syncTimeout = setTimeout(() => {
-        void this.sendSyncMessage();
-        // Always restart a sync, no matter whether the message was sent.
-        // Set a multiplier so we wait a bit longer to not hog the conversation
-        void this.restartSync(2);
-      }, timeoutMs);
-    }
+    this.syncRandomTimeout.restart(multiplier);
   }
 
   private stopSync(): void {
-    if (this.syncTimeout) {
-      clearTimeout(this.syncTimeout);
-      this.syncTimeout = undefined;
-    }
-  }
-
-  // Used to enable overriding when testing
-  private random(): number {
-    return Math.random();
+    this.syncRandomTimeout.stop();
   }
 
   private safeSendEvent<T extends ReliableChannelEvent>(
@@ -661,11 +661,16 @@ export class ReliableChannel<
     this.addTrackedEventListener(
       MessageChannelEvent.OutMessageSent,
       (event) => {
-        if (event.detail.content) {
+        if (isContentMessage(event.detail)) {
           const messageId = ReliableChannel.getMessageId(event.detail.content);
           this.safeSendEvent("message-sent", {
             detail: messageId
           });
+
+          // restart the timeout when a content message has been sent
+          // because the functionality is fulfilled (content message contains
+          // causal history)
+          this.restartSync();
         }
       }
     );
@@ -678,7 +683,7 @@ export class ReliableChannel<
             detail: event.detail
           });
 
-          // Stopping retries
+          // Stopping retries as the message was acknowledged
           this.retryManager?.stopRetries(event.detail);
         }
       }
@@ -709,6 +714,7 @@ export class ReliableChannel<
     this.addTrackedEventListener(
       MessageChannelEvent.InMessageReceived,
       (event) => {
+        this._internalSyncStatus.onMessagesReceived(event.detail.messageId);
         // restart the timeout when a content message has been received
         if (isContentMessage(event.detail)) {
           // send a sync message faster to ack someone's else
@@ -718,18 +724,12 @@ export class ReliableChannel<
     );
 
     this.addTrackedEventListener(
-      MessageChannelEvent.OutMessageSent,
-      (event) => {
-        // restart the timeout when a content message has been sent
-        if (isContentMessage(event.detail)) {
-          this.restartSync();
-        }
-      }
-    );
-
-    this.addTrackedEventListener(
       MessageChannelEvent.InMessageMissing,
       (event) => {
+        this._internalSyncStatus.onMessagesMissing(
+          ...event.detail.map((m) => m.messageId)
+        );
+
         for (const { messageId, retrievalHint } of event.detail) {
           if (retrievalHint && this.missingMessageRetriever) {
             this.missingMessageRetriever.addMissingMessage(
@@ -740,6 +740,12 @@ export class ReliableChannel<
         }
       }
     );
+
+    this.addTrackedEventListener(MessageChannelEvent.InMessageLost, (event) => {
+      this._internalSyncStatus.onMessagesLost(
+        ...event.detail.map((m) => m.messageId)
+      );
+    });
 
     if (this.queryOnConnect) {
       const queryListener = (event: any): void => {

@@ -2,17 +2,30 @@ import _ from "lodash";
 
 import { ContentMessage, isContentMessage } from "./message.js";
 
+export const DEFAULT_MAX_LENGTH = 10_000;
+
 /**
- * In-Memory implementation of a local store of messages.
+ * In-Memory implementation of a local history of messages.
  *
  * Messages are store in SDS chronological order:
  * - messages[0] is the oldest message
  * - messages[n] is the newest message
  *
  * Only stores content message: `message.lamportTimestamp` and `message.content` are present.
+ *
+ * Oldest messages are dropped when `maxLength` is reached.
+ * If an array of items longer than `maxLength` is pushed, dropping will happen
+ * at next push.
  */
 export class MemLocalHistory {
   private items: ContentMessage[] = [];
+
+  /**
+   * Construct a new in-memory local history
+   *
+   * @param maxLength The maximum number of message to store.
+   */
+  public constructor(private maxLength: number = DEFAULT_MAX_LENGTH) {}
 
   public get length(): number {
     return this.items.length;
@@ -32,6 +45,12 @@ export class MemLocalHistory {
 
     // Remove duplicates by messageId while maintaining order
     this.items = _.uniqBy(combinedItems, "messageId");
+
+    // Let's drop older messages if max length is reached
+    if (this.length > this.maxLength) {
+      const numItemsToRemove = this.length - this.maxLength;
+      this.items.splice(0, numItemsToRemove);
+    }
 
     return this.items.length;
   }

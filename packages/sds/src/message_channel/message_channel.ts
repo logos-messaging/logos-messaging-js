@@ -283,7 +283,7 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
   /**
    * Processes messages in the incoming buffer, delivering those with satisfied dependencies.
    *
-   * @returns Array of history entries for messages still missing dependencies
+   * @returns The missing dependencies
    */
   public sweepIncomingBuffer(): HistoryEntry[] {
     const { buffer, missing } = this.incomingBuffer.reduce<{
@@ -319,8 +319,8 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
           })
         );
 
-        // Optionally, if a message has not been received after a predetermined amount of time,
-        // its dependencies are marked as irretrievably lost (implicitly by removing it from the buffer without delivery)
+        // Optionally, if a message did not get its dependencies fulfilled after a predetermined amount of time,
+        // they are marked as irretrievably lost (implicitly by removing it from the buffer without delivery)
         if (this.timeoutForLostMessagesMs) {
           const timeReceived = this.timeReceived.get(message.messageId);
           if (
@@ -330,9 +330,19 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
             this.safeSendEvent(MessageChannelEvent.InMessageLost, {
               detail: Array.from(missingDependencies)
             });
+
+            // We deliver the message to resume participation in the log
+            if (isContentMessage(message) && this.deliverMessage(message)) {
+              this.safeSendEvent(MessageChannelEvent.InMessageDelivered, {
+                detail: message.messageId
+              });
+            }
+            // The message and its missing dependencies are dropped
+            // from the incoming buffer
             return { buffer, missing };
           }
         }
+
         missingDependencies.forEach((dependency) => {
           missing.add(dependency);
         });

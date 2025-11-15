@@ -19,6 +19,10 @@ describe("waitForRemotePeer", () => {
     eventTarget = new EventTarget();
   });
 
+  afterEach(() => {
+    sinon.restore();
+  });
+
   it("should reject if WakuNode is not started", async () => {
     const wakuMock = mockWakuNode({
       connections: [{}]
