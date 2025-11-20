@@ -12,7 +12,7 @@ export interface HistoryStorage {
 export interface PersistentHistoryOptions {
   channelId: ChannelId;
   storage?: HistoryStorage;
-  storageKey?: string;
+  storageKeyPrefix?: string;
 }
 
 type StoredHistoryEntry = {
@@ -46,8 +46,7 @@ export class PersistentHistory implements ILocalHistory {
   public constructor(options: PersistentHistoryOptions) {
     this.memory = new MemLocalHistory();
     this.storage = options.storage ?? getDefaultHistoryStorage();
-    this.storageKey =
-      options.storageKey ?? `${HISTORY_STORAGE_PREFIX}${options.channelId}`;
+    this.storageKey = `${HISTORY_STORAGE_PREFIX}${options.storageKeyPrefix}:${options.channelId}`;
     this.restore();
   }
 
