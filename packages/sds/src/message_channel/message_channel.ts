@@ -117,9 +117,8 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
     this.outgoingBuffer = [];
     this.possibleAcks = new Map();
     this.incomingBuffer = [];
-    const resolvedLocalHistory =
+    this.localHistory =
       localHistory ?? new PersistentHistory({ channelId: this.channelId });
-    this.localHistory = resolvedLocalHistory;
     this.causalHistorySize =
       options.causalHistorySize ?? DEFAULT_CAUSAL_HISTORY_SIZE;
     // TODO: this should be determined based on the bloom filter parameters and number of hashes
