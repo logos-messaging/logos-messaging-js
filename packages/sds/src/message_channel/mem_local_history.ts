@@ -17,7 +17,37 @@ export const DEFAULT_MAX_LENGTH = 10_000;
  * If an array of items longer than `maxLength` is pushed, dropping will happen
  * at next push.
  */
-export class MemLocalHistory {
+export interface ILocalHistory {
+  length: number;
+  push(...items: ContentMessage[]): number;
+  some(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      array: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): boolean;
+  slice(start?: number, end?: number): ContentMessage[];
+  find(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      obj: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): ContentMessage | undefined;
+  findIndex(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      obj: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): number;
+}
+
+export class MemLocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
 
   /**

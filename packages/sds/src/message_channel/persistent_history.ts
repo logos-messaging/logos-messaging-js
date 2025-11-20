@@ -1,6 +1,6 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 
-import { MemLocalHistory } from "./mem_local_history.js";
+import { ILocalHistory, MemLocalHistory } from "./mem_local_history.js";
 import { ChannelId, ContentMessage, HistoryEntry } from "./message.js";
 
 export interface HistoryStorage {
@@ -38,22 +38,64 @@ const HISTORY_STORAGE_PREFIX = "waku:sds:history:";
  *
  * If no storage backend is available, this behaves like {@link MemLocalHistory}.
  */
-export class PersistentHistory extends MemLocalHistory {
+export class PersistentHistory implements ILocalHistory {
   private readonly storage?: HistoryStorage;
   private readonly storageKey: string;
+  private readonly memory: MemLocalHistory;
 
   public constructor(options: PersistentHistoryOptions) {
-    super();
+    this.memory = new MemLocalHistory();
     this.storage = options.storage ?? getDefaultHistoryStorage();
     this.storageKey =
       options.storageKey ?? `${HISTORY_STORAGE_PREFIX}${options.channelId}`;
     this.restore();
   }
 
-  public override push(...items: ContentMessage[]): number {
-    const length = super.push(...items);
+  public get length(): number {
+    return this.memory.length;
+  }
+
+  public push(...items: ContentMessage[]): number {
+    const length = this.memory.push(...items);
     this.persist();
     return length;
+  }
+
+  public some(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      array: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): boolean {
+    return this.memory.some(predicate, thisArg);
+  }
+
+  public slice(start?: number, end?: number): ContentMessage[] {
+    return this.memory.slice(start, end);
+  }
+
+  public find(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      obj: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): ContentMessage | undefined {
+    return this.memory.find(predicate, thisArg);
+  }
+
+  public findIndex(
+    predicate: (
+      value: ContentMessage,
+      index: number,
+      obj: ContentMessage[]
+    ) => unknown,
+    thisArg?: any
+  ): number {
+    return this.memory.findIndex(predicate, thisArg);
   }
 
   private persist(): void {
@@ -62,7 +104,7 @@ export class PersistentHistory extends MemLocalHistory {
     }
     try {
       const payload = JSON.stringify(
-        this.slice(0).map(serializeContentMessage)
+        this.memory.slice(0).map(serializeContentMessage)
       );
       this.storage.setItem(this.storageKey, payload);
     } catch {
@@ -86,7 +128,7 @@ export class PersistentHistory extends MemLocalHistory {
         .map(deserializeContentMessage)
         .filter((message): message is ContentMessage => Boolean(message));
       if (messages.length) {
-        super.push(...messages);
+        this.memory.push(...messages);
       }
     } catch {
       try {
@@ -153,6 +195,7 @@ const deserializeContentMessage = (
       BigInt(record.lamportTimestamp),
       fromHex(record.bloomFilter),
       content,
+      [],
       fromHex(record.retrievalHint)
     );
   } catch {
