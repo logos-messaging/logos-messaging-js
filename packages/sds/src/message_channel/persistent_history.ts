@@ -47,7 +47,7 @@ export class PersistentHistory implements ILocalHistory {
     this.memory = new MemLocalHistory();
     this.storage = options.storage ?? getDefaultHistoryStorage();
     this.storageKey = `${HISTORY_STORAGE_PREFIX}${options.storageKeyPrefix}:${options.channelId}`;
-    this.restore();
+    this.load();
   }
 
   public get length(): number {
@@ -56,7 +56,7 @@ export class PersistentHistory implements ILocalHistory {
 
   public push(...items: ContentMessage[]): number {
     const length = this.memory.push(...items);
-    this.persist();
+    this.save();
     return length;
   }
 
@@ -97,7 +97,7 @@ export class PersistentHistory implements ILocalHistory {
     return this.memory.findIndex(predicate, thisArg);
   }
 
-  private persist(): void {
+  private save(): void {
     if (!this.storage) {
       return;
     }
@@ -111,7 +111,7 @@ export class PersistentHistory implements ILocalHistory {
     }
   }
 
-  private restore(): void {
+  private load(): void {
     if (!this.storage) {
       return;
     }
