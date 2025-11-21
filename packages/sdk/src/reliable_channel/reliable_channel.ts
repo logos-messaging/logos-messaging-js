@@ -19,8 +19,8 @@ import {
   MessageChannelEvent,
   MessageChannelEvents,
   type MessageChannelOptions,
+  type ParticipantId,
   Message as SdsMessage,
-  type SenderId,
   SyncMessage
 } from "@waku/sds";
 import { Logger } from "@waku/utils";
@@ -39,9 +39,11 @@ import { ISyncStatusEvents, SyncStatus } from "./sync_status.js";
 const log = new Logger("sdk:reliable-channel");
 
 const DEFAULT_SYNC_MIN_INTERVAL_MS = 30 * 1000; // 30 seconds
+const SYNC_INTERVAL_REPAIR_MULTIPLIER = 0.3; // Reduce sync interval when repairs pending
 const DEFAULT_RETRY_INTERVAL_MS = 30 * 1000; // 30 seconds
 const DEFAULT_MAX_RETRY_ATTEMPTS = 10;
 const DEFAULT_SWEEP_IN_BUF_INTERVAL_MS = 5 * 1000;
+const DEFAULT_SWEEP_REPAIR_INTERVAL_MS = 10 * 1000; // 10 seconds
 const DEFAULT_PROCESS_TASK_MIN_ELAPSE_MS = 1000;
 
 const IRRECOVERABLE_SENDING_ERRORS: LightPushError[] = [
@@ -50,6 +52,15 @@ const IRRECOVERABLE_SENDING_ERRORS: LightPushError[] = [
   LightPushError.SIZE_TOO_BIG,
   LightPushError.RLN_PROOF_GENERATION
 ];
+
+/**
+ * Strategy for retrieving missing messages.
+ * - 'both': Use SDS-R peer repair and Store queries in parallel (default)
+ * - 'sds-r-only': Only use SDS-R peer repair
+ * - 'store-only': Only use Store queries (legacy behavior)
+ * - 'none': No automatic retrieval
+ */
+export type RetrievalStrategy = "both" | "sds-r-only" | "store-only" | "none";
 
 export type ReliableChannelOptions = MessageChannelOptions & {
   /**
@@ -81,6 +92,7 @@ export type ReliableChannelOptions = MessageChannelOptions & {
 
   /**
    * How often store queries are done to retrieve missing messages.
+   * Only applies when retrievalStrategy includes Store ('both' or 'store-only').
    *
    * @default 10,000 (10 seconds)
    */
@@ -114,6 +126,13 @@ export type ReliableChannelOptions = MessageChannelOptions & {
    * @default 1000 (1 second)
    */
   processTaskMinElapseMs?: number;
+
+  /**
+   * Strategy for retrieving missing messages.
+   *
+   * @default 'both'
+   */
+  retrievalStrategy?: RetrievalStrategy;
 };
 
 /**
@@ -152,6 +171,7 @@ export class ReliableChannel<
   private syncRandomTimeout: RandomTimeout;
   private sweepInBufInterval: ReturnType<typeof setInterval> | undefined;
   private readonly sweepInBufIntervalMs: number;
+  private sweepRepairInterval: ReturnType<typeof setInterval> | undefined;
   private processTaskTimeout: ReturnType<typeof setTimeout> | undefined;
   private readonly retryManager: RetryManager | undefined;
   private readonly missingMessageRetriever?: MissingMessageRetriever<T>;
@@ -165,6 +185,7 @@ export class ReliableChannel<
     public messageChannel: MessageChannel,
     private encoder: IEncoder,
     private decoder: IDecoder<T>,
+    private retrievalStrategy: RetrievalStrategy,
     options?: ReliableChannelOptions
   ) {
     super();
@@ -226,7 +247,8 @@ export class ReliableChannel<
     this.processTaskMinElapseMs =
       options?.processTaskMinElapseMs ?? DEFAULT_PROCESS_TASK_MIN_ELAPSE_MS;
 
-    if (this._retrieve) {
+    // Only enable Store retrieval based on strategy
+    if (this._retrieve && this.shouldUseStore()) {
       this.missingMessageRetriever = new MissingMessageRetriever(
         this.decoder,
         options?.retrieveFrequencyMs,
@@ -290,17 +312,26 @@ export class ReliableChannel<
   public static async create<T extends IDecodedMessage>(
     node: IWaku,
     channelId: ChannelId,
-    senderId: SenderId,
+    senderId: ParticipantId,
     encoder: IEncoder,
     decoder: IDecoder<T>,
     options?: ReliableChannelOptions
   ): Promise<ReliableChannel<T>> {
-    const sdsMessageChannel = new MessageChannel(channelId, senderId, options);
+    // Enable SDS-R repair only if retrieval strategy uses it
+    const retrievalStrategy = options?.retrievalStrategy ?? "both";
+    const enableRepair =
+      retrievalStrategy === "both" || retrievalStrategy === "sds-r-only";
+
+    const sdsMessageChannel = new MessageChannel(channelId, senderId, {
+      ...options,
+      enableRepair
+    });
     const messageChannel = new ReliableChannel(
       node,
       sdsMessageChannel,
       encoder,
       decoder,
+      retrievalStrategy,
       options
     );
 
@@ -455,6 +486,7 @@ export class ReliableChannel<
     // missing messages or the status of previous outgoing messages
     this.messageChannel.pushIncomingMessage(sdsMessage, retrievalHint);
 
+    // Remove from Store retriever if message was retrieved
     this.missingMessageRetriever?.removeMissingMessage(sdsMessage.messageId);
 
     if (sdsMessage.content && sdsMessage.content.length > 0) {
@@ -528,6 +560,9 @@ export class ReliableChannel<
     this.setupEventListeners();
     this.restartSync();
     this.startSweepIncomingBufferLoop();
+
+    this.startRepairSweepLoop();
+
     if (this._retrieve) {
       this.missingMessageRetriever?.start();
       this.queryOnConnect?.start();
@@ -544,6 +579,7 @@ export class ReliableChannel<
     this.removeAllEventListeners();
     this.stopSync();
     this.stopSweepIncomingBufferLoop();
+    this.stopRepairSweepLoop();
     this.clearProcessTasks();
 
     if (this.activePendingProcessTask) {
@@ -582,8 +618,55 @@ export class ReliableChannel<
     }
   }
 
+  private startRepairSweepLoop(): void {
+    if (!this.shouldUseSdsR()) {
+      return;
+    }
+    this.stopRepairSweepLoop();
+    this.sweepRepairInterval = setInterval(() => {
+      void this.messageChannel
+        .sweepRepairIncomingBuffer(async (message) => {
+          // Rebroadcast the repair message
+          const wakuMessage = { payload: message.encode() };
+          const result = await this._send(this.encoder, wakuMessage);
+          return result.failures.length === 0;
+        })
+        .catch((err) => {
+          log.error("error encountered when sweeping repair buffer", err);
+        });
+    }, DEFAULT_SWEEP_REPAIR_INTERVAL_MS);
+  }
+
+  private stopRepairSweepLoop(): void {
+    if (this.sweepRepairInterval) {
+      clearInterval(this.sweepRepairInterval);
+      this.sweepInBufInterval = undefined;
+    }
+  }
+
+  private shouldUseStore(): boolean {
+    return (
+      this.retrievalStrategy === "both" ||
+      this.retrievalStrategy === "store-only"
+    );
+  }
+
+  private shouldUseSdsR(): boolean {
+    return (
+      this.retrievalStrategy === "both" ||
+      this.retrievalStrategy === "sds-r-only"
+    );
+  }
+
   private restartSync(multiplier: number = 1): void {
-    this.syncRandomTimeout.restart(multiplier);
+    // Adaptive sync: use shorter interval when repairs are pending
+    const hasPendingRepairs =
+      this.shouldUseSdsR() && this.messageChannel.hasPendingRepairRequests();
+    const effectiveMultiplier = hasPendingRepairs
+      ? multiplier * SYNC_INTERVAL_REPAIR_MULTIPLIER
+      : multiplier;
+
+    this.syncRandomTimeout.restart(effectiveMultiplier);
   }
 
   private stopSync(): void {
@@ -731,6 +814,8 @@ export class ReliableChannel<
         );
 
         for (const { messageId, retrievalHint } of event.detail) {
+          // Store retrieval (for 'both' and 'store-only' strategies)
+          // SDS-R repair happens automatically via RepairManager for 'both' and 'sds-r-only'
           if (retrievalHint && this.missingMessageRetriever) {
             this.missingMessageRetriever.addMissingMessage(
               messageId,

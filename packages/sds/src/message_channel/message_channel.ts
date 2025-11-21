@@ -128,18 +128,20 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
 
     // Only construct RepairManager if repair is enabled (default: true)
     if (options.enableRepair ?? true) {
-      this.repairManager = new RepairManager(
-        senderId,
-        options.repairConfig,
-        (event: string, detail: unknown) => {
-          this.safeSendEvent(event as MessageChannelEvent, { detail });
-        }
-      );
+      this.repairManager = new RepairManager(senderId, options.repairConfig);
     }
   }
 
   public static getMessageId(payload: Uint8Array): MessageId {
     return bytesToHex(sha256(payload));
+  }
+
+  /**
+   * Check if there are pending repair requests that need to be sent.
+   * Useful for adaptive sync intervals - increase frequency when repairs pending.
+   */
+  public hasPendingRepairRequests(currentTime = Date.now()): boolean {
+    return this.repairManager?.hasRequestsReady(currentTime) ?? false;
   }
 
   /**

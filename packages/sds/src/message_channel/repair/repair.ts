@@ -21,11 +21,6 @@ const log = new Logger("sds:repair:manager");
 const PARTICIPANTS_PER_RESPONSE_GROUP = 128;
 
 /**
- * Event emitter callback for repair events
- */
-export type RepairEventEmitter = (event: string, detail: unknown) => void;
-
-/**
  * Configuration for SDS-R repair protocol
  */
 export interface RepairConfig {
@@ -58,16 +53,10 @@ export class RepairManager {
   private readonly config: Required<RepairConfig>;
   private readonly outgoingBuffer: OutgoingRepairBuffer;
   private readonly incomingBuffer: IncomingRepairBuffer;
-  private readonly eventEmitter?: RepairEventEmitter;
 
-  public constructor(
-    participantId: ParticipantId,
-    config: RepairConfig = {},
-    eventEmitter?: RepairEventEmitter
-  ) {
+  public constructor(participantId: ParticipantId, config: RepairConfig = {}) {
     this.participantId = participantId;
     this.config = { ...DEFAULT_REPAIR_CONFIG, ...config };
-    this.eventEmitter = eventEmitter;
 
     this.outgoingBuffer = new OutgoingRepairBuffer(this.config.bufferSize);
     this.incomingBuffer = new IncomingRepairBuffer(this.config.bufferSize);
@@ -142,19 +131,13 @@ export class RepairManager {
       // Calculate when to request this repair
       const tReq = this.calculateTReq(entry.messageId, currentTime);
 
-      // Add to outgoing buffer - only log and emit event if actually added
+      // Add to outgoing buffer - only log if actually added
       const wasAdded = this.outgoingBuffer.add(entry, tReq);
 
       if (wasAdded) {
         log.info(
           `Added missing dependency ${entry.messageId} to repair buffer with T_req=${tReq}`
         );
-
-        // Emit event
-        this.eventEmitter?.("RepairRequestQueued", {
-          messageId: entry.messageId,
-          tReq
-        });
       }
     }
   }
@@ -238,19 +221,13 @@ export class RepairManager {
         currentTime
       );
 
-      // Add to incoming buffer - only log and emit event if actually added
+      // Add to incoming buffer - only log if actually added
       const wasAdded = this.incomingBuffer.add(request, tResp);
 
       if (wasAdded) {
         log.info(
           `Will respond to repair request for ${request.messageId} at T_resp=${tResp}`
         );
-
-        // Emit event
-        this.eventEmitter?.("RepairResponseQueued", {
-          messageId: request.messageId,
-          tResp
-        });
       }
     }
   }
@@ -327,5 +304,13 @@ export class RepairManager {
     log.info(
       `Updated response groups to ${this.config.numResponseGroups} for ${numParticipants} participants`
     );
+  }
+
+  /**
+   * Check if there are repair requests ready to be sent
+   */
+  public hasRequestsReady(currentTime = Date.now()): boolean {
+    const items = this.outgoingBuffer.getItems();
+    return items.length > 0 && items[0].tReq <= currentTime;
   }
 }
