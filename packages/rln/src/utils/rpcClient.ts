@@ -27,7 +27,11 @@ export const createViemClientFromWindow = async (): Promise<RpcClient> => {
     );
   }
 
-  const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  if (!Array.isArray(accounts)) {
+    throw Error("Failed to get accounts");
+  }
+  const account = accounts[0] as Address;
 
   const rpcClient: RpcClient = createWalletClient({
     account: account as Address,
