@@ -31,6 +31,8 @@ type StoredContentMessage = {
 };
 
 const HISTORY_STORAGE_PREFIX = "waku:sds:history:";
+const DEFAULT_HISTORY_STORAGE: HistoryStorage | undefined =
+  typeof localStorage !== "undefined" ? localStorage : undefined;
 
 /**
  * Persists the SDS local history in a browser/localStorage compatible backend.
@@ -44,7 +46,7 @@ export class PersistentHistory implements ILocalHistory {
 
   public constructor(options: PersistentHistoryOptions) {
     this.memory = new MemLocalHistory();
-    this.storage = options.storage || localStorage;
+    this.storage = options.storage ?? DEFAULT_HISTORY_STORAGE;
     this.storageKey = `${HISTORY_STORAGE_PREFIX}${options.channelId}`;
     this.load();
   }
