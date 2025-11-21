@@ -116,30 +116,35 @@ jobs:
       - run: npm install
         if: ${{ steps.release.outputs.releases_created }}
 
+      - run: npm run build
+        if: ${{ steps.release.outputs.releases_created }}
+
       - name: Setup Foundry
         if: ${{ steps.release.outputs.releases_created }}
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
 
-      - name: Generate RLN contract ABIs and verify build
+      - name: Generate RLN contract ABIs
+        id: rln-abi
         if: ${{ steps.release.outputs.releases_created }}
         run: |
           cd packages/rln
           npm run setup:contract-abi || {
             echo "::warning::Failed to generate contract ABIs, marking @waku/rln as private to skip publishing"
             node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.private = true; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-            exit 0
+            echo "failed=true" >> $GITHUB_OUTPUT
           }
-          npm run build || {
-            echo "::warning::Failed to build @waku/rln, marking as private to skip publishing"
-            node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.private = true; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
-            exit 0
-          }
-          cd ../..
 
-      - run: npm run build
-        if: ${{ steps.release.outputs.releases_created }}
+      - name: Rebuild with new ABIs
+        if: ${{ steps.release.outputs.releases_created && steps.rln-abi.outputs.failed != 'true' }}
+        run: |
+          npm install -w packages/rln
+          npm run build -w @waku/rln || {
+            echo "::warning::Failed to build @waku/rln, marking as private to skip publishing"
+            cd packages/rln
+            node -e "const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); pkg.private = true; fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+          }
 
       - run: npm run publish
         if: ${{ steps.release.outputs.releases_created }}
