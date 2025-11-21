@@ -568,7 +568,10 @@ export class ReliableChannel<
   }
 
   private stopRepairSweepLoop(): void {
-    if (this.sweepRepairInterval) clearInterval(this.sweepRepairInterval);
+    if (this.sweepRepairInterval) {
+         clearInterval(this.sweepRepairInterval);
+         this.sweepInBufInterval = undefined;
+   }
   }
 
   private shouldUseStore(): boolean {
