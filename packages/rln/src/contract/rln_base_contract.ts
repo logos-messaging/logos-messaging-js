@@ -225,7 +225,15 @@ export class RLNBaseContract {
         account: this.rpcClient.account.address
       });
     } catch (err) {
-      throw new Error("Simulating extending membership failed: " + err);
+      if (err instanceof Error) {
+        throw new Error(
+          "Error simulating extending membership: " + err.message
+        );
+      } else {
+        throw new Error("Error simulating extending membership", {
+          cause: err
+        });
+      }
     }
     const hash = await this.contract.write.extendMemberships(
       [[idCommitmentBigInt]],
@@ -264,7 +272,11 @@ export class RLNBaseContract {
         }
       );
     } catch (err) {
-      throw new Error("Error simulating eraseMemberships: " + err);
+      if (err instanceof Error) {
+        throw new Error("Error simulating eraseMemberships: " + err.message);
+      } else {
+        throw new Error("Error simulating eraseMemberships", { cause: err });
+      }
     }
 
     const hash = await this.contract.write.eraseMemberships(
@@ -304,7 +316,11 @@ export class RLNBaseContract {
         }
       );
     } catch (err) {
-      throw new Error("Failed to simulate register membership: " + err);
+      if (err instanceof Error) {
+        throw new Error("Error simulating register membership: " + err.message);
+      } else {
+        throw new Error("Error simulating register membership", { cause: err });
+      }
     }
 
     const hash = await this.contract.write.register(
@@ -335,7 +351,11 @@ export class RLNBaseContract {
         account: this.rpcClient.account.address
       });
     } catch (err) {
-      throw new Error("Error simulating withdraw: " + err);
+      if (err instanceof Error) {
+        throw new Error("Error simulating withdraw: " + err.message);
+      } else {
+        throw new Error("Error simulating withdraw", { cause: err });
+      }
     }
 
     const hash = await this.contract.write.withdraw([token as Address], {
