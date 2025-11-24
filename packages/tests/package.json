@@ -81,7 +81,7 @@
     "@waku/relay": "*",
     "@waku/sdk": "*",
     "allure-commandline": "^2.27.0",
-    "allure-mocha": "^2.9.2",
+    "allure-mocha": "^3.4.2",
     "chai": "^4.3.10",
     "cspell": "^8.6.1",
     "datastore-core": "10.0.4",
