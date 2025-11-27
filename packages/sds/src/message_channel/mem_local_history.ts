@@ -1,3 +1,4 @@
+import { Logger } from "@waku/utils";
 import _ from "lodash";
 
 import { type ChannelId, ContentMessage, isContentMessage } from "./message.js";
@@ -53,6 +54,8 @@ export type MemLocalHistoryOptions = {
   maxSize?: number;
 };
 
+const log = new Logger("sds:local-history");
+
 export class MemLocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
   private readonly storage?: PersistentStorage;
@@ -70,10 +73,13 @@ export class MemLocalHistory implements ILocalHistory {
     this.maxSize = maxSize ?? DEFAULT_MAX_LENGTH;
     if (storage instanceof PersistentStorage) {
       this.storage = storage;
+      log.info("Using explicit persistent storage");
     } else if (typeof storage === "string") {
       this.storage = PersistentStorage.create(storage);
+      log.info("Creating persistent storage for channel", storage);
     } else {
       this.storage = undefined;
+      log.info("Using in-memory storage");
     }
 
     this.load();
