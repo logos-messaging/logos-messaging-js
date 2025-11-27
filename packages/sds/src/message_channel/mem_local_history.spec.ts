@@ -7,7 +7,7 @@ describe("MemLocalHistory", () => {
   it("Cap max size when messages are pushed one at a time", () => {
     const maxSize = 2;
 
-    const hist = new MemLocalHistory(maxSize);
+    const hist = new MemLocalHistory({ maxSize: maxSize });
 
     hist.push(
       new ContentMessage("1", "c", "a", [], 1n, undefined, new Uint8Array([1]))
@@ -31,7 +31,7 @@ describe("MemLocalHistory", () => {
   it("Cap max size when a pushed array is exceeding the cap", () => {
     const maxSize = 2;
 
-    const hist = new MemLocalHistory(maxSize);
+    const hist = new MemLocalHistory({ maxSize: maxSize });
 
     hist.push(
       new ContentMessage("1", "c", "a", [], 1n, undefined, new Uint8Array([1]))
