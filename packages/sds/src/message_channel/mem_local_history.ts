@@ -1,6 +1,7 @@
 import _ from "lodash";
 
-import { ContentMessage, isContentMessage } from "./message.js";
+import { ChannelId, ContentMessage, isContentMessage } from "./message.js";
+import { PersistentStorage } from "./persistent_storage.js";
 
 export const DEFAULT_MAX_LENGTH = 10_000;
 
@@ -49,13 +50,31 @@ export interface ILocalHistory {
 
 export class MemLocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
+  private readonly storage?: PersistentStorage;
+  private readonly maxSize: number;
 
   /**
-   * Construct a new in-memory local history
+   * Construct a new in-memory local history.
    *
-   * @param maxLength The maximum number of message to store.
+   * @param opts Configuration object.
+   *   - storage: Optional persistent storage backend for message persistence or channelId to use with PersistentStorage.
+   *   - maxSize: The maximum number of messages to store. Optional, defaults to DEFAULT_MAX_LENGTH.
    */
-  public constructor(private maxLength: number = DEFAULT_MAX_LENGTH) {}
+  public constructor(
+    opts: { storage?: ChannelId | PersistentStorage; maxSize?: number } = {}
+  ) {
+    const { storage, maxSize } = opts;
+    this.maxSize = maxSize ?? DEFAULT_MAX_LENGTH;
+    if (storage instanceof PersistentStorage) {
+      this.storage = storage;
+    } else if (typeof storage === "string") {
+      this.storage = PersistentStorage.create(storage);
+    } else {
+      this.storage = undefined;
+    }
+
+    this.load();
+  }
 
   public get length(): number {
     return this.items.length;
@@ -77,10 +96,12 @@ export class MemLocalHistory implements ILocalHistory {
     this.items = _.uniqBy(combinedItems, "messageId");
 
     // Let's drop older messages if max length is reached
-    if (this.length > this.maxLength) {
-      const numItemsToRemove = this.length - this.maxLength;
+    if (this.length > this.maxSize) {
+      const numItemsToRemove = this.length - this.maxSize;
       this.items.splice(0, numItemsToRemove);
     }
+
+    this.save();
 
     return this.items.length;
   }
@@ -127,6 +148,21 @@ export class MemLocalHistory implements ILocalHistory {
       throw new Error(
         "Message must have lamportTimestamp and content defined, sync and ephemeral messages cannot be stored"
       );
+    }
+  }
+
+  private save(): void {
+    this.storage?.save(this.items);
+  }
+
+  private load(): void {
+    if (!this.storage) {
+      return;
+    }
+
+    const messages = this.storage.load();
+    if (messages.length > 0) {
+      this.items = messages;
     }
   }
 }

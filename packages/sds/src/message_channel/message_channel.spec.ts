@@ -5,6 +5,7 @@ import { DefaultBloomFilter } from "../bloom_filter/bloom.js";
 
 import { MessageChannelEvent } from "./events.js";
 import { MemLocalHistory } from "./mem_local_history.js";
+import { ILocalHistory } from "./mem_local_history.js";
 import {
   ContentMessage,
   HistoryEntry,
@@ -14,7 +15,6 @@ import {
 } from "./message.js";
 import {
   DEFAULT_BLOOM_FILTER_OPTIONS,
-  ILocalHistory,
   MessageChannel
 } from "./message_channel.js";
 

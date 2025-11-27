@@ -1,8 +1,8 @@
 import { Logger } from "@waku/utils";
 
+import type { ILocalHistory } from "../mem_local_history.js";
 import type { HistoryEntry, MessageId } from "../message.js";
 import { Message } from "../message.js";
-import type { ILocalHistory } from "../message_channel.js";
 
 import { IncomingRepairBuffer, OutgoingRepairBuffer } from "./buffers.js";
 import {
