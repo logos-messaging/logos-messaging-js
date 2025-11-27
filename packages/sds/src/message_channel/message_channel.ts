@@ -23,6 +23,8 @@ import {
 } from "./message.js";
 import { RepairConfig, RepairManager } from "./repair/repair.js";
 
+export type { ILocalHistory };
+
 export const DEFAULT_BLOOM_FILTER_OPTIONS = {
   capacity: 10000,
   errorRate: 0.001

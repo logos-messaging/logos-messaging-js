@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import { ChannelId, ContentMessage, isContentMessage } from "./message.js";
+import { type ChannelId, ContentMessage, isContentMessage } from "./message.js";
 import { PersistentStorage } from "./persistent_storage.js";
 
 export const DEFAULT_MAX_LENGTH = 10_000;
@@ -48,10 +48,10 @@ export interface ILocalHistory {
   ): number;
 }
 
-export interface MemLocalHistoryOptions {
+export type MemLocalHistoryOptions = {
   storage?: ChannelId | PersistentStorage;
   maxSize?: number;
-}
+};
 
 export class MemLocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
