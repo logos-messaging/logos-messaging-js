@@ -14,8 +14,3 @@ export {
   isEphemeralMessage,
   isSyncMessage
 } from "./message.js";
-export { ILocalHistory, MemLocalHistory } from "./mem_local_history.js";
-export {
-  PersistentStorage,
-  type HistoryStorage
-} from "./persistent_storage.js";
