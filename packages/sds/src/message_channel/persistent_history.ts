@@ -1,7 +1,10 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { Logger } from "@waku/utils";
 
 import { ILocalHistory, MemLocalHistory } from "./mem_local_history.js";
 import { ChannelId, ContentMessage, HistoryEntry } from "./message.js";
+
+const log = new Logger("sds:persistent-history");
 
 export interface HistoryStorage {
   getItem(key: string): string | null;
@@ -48,6 +51,13 @@ export class PersistentHistory implements ILocalHistory {
     this.memory = new MemLocalHistory();
     this.storage = options.storage ?? DEFAULT_HISTORY_STORAGE;
     this.storageKey = `${HISTORY_STORAGE_PREFIX}${options.channelId}`;
+
+    if (!this.storage) {
+      log.warn(
+        "Storage backend unavailable (localStorage not found). Falling back to in-memory history. Messages will not persist across sessions."
+      );
+    }
+
     this.load();
   }
 
