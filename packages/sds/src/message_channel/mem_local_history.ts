@@ -159,11 +159,7 @@ export class MemLocalHistory implements ILocalHistory {
   }
 
   private load(): void {
-    if (!this.storage) {
-      return;
-    }
-
-    const messages = this.storage.load();
+    const messages = this.storage?.load() ?? [];
     if (messages.length > 0) {
       this.items = messages;
     }
