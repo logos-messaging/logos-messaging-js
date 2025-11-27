@@ -1260,7 +1260,14 @@ describe("MessageChannel", function () {
     });
   });
 
-  describe("Default localStorage persistence", () => {
+  describe("localStorage persistence", function () {
+    // LocalStorage specific tests (browser)
+    before(function () {
+      if (typeof localStorage === "undefined") {
+        this.skip();
+      }
+    });
+
     it("should restore messages from localStorage on channel recreation", async () => {
       const persistentChannelId = "persistent-channel";
 
