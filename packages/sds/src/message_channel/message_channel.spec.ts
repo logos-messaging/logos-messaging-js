@@ -15,7 +15,8 @@ import {
 } from "./message.js";
 import {
   DEFAULT_BLOOM_FILTER_OPTIONS,
-  MessageChannel
+  MessageChannel,
+  MessageChannelOptions
 } from "./message_channel.js";
 
 const channelId = "test-channel";
@@ -30,12 +31,7 @@ const callback = (_message: Message): Promise<{ success: boolean }> => {
 const createTestChannel = (
   channelId: string,
   senderId: string,
-  options: {
-    causalHistorySize?: number;
-    possibleAcksThreshold?: number;
-    timeoutForLostMessagesMs?: number;
-    enableRepair?: boolean;
-  } = {}
+  options: MessageChannelOptions = {}
 ): MessageChannel => {
   return new MessageChannel(
     channelId,

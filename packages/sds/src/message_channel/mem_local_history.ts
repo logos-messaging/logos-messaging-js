@@ -48,6 +48,11 @@ export interface ILocalHistory {
   ): number;
 }
 
+export interface MemLocalHistoryOptions {
+  storage?: ChannelId | PersistentStorage;
+  maxSize?: number;
+}
+
 export class MemLocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
   private readonly storage?: PersistentStorage;
@@ -60,9 +65,7 @@ export class MemLocalHistory implements ILocalHistory {
    *   - storage: Optional persistent storage backend for message persistence or channelId to use with PersistentStorage.
    *   - maxSize: The maximum number of messages to store. Optional, defaults to DEFAULT_MAX_LENGTH.
    */
-  public constructor(
-    opts: { storage?: ChannelId | PersistentStorage; maxSize?: number } = {}
-  ) {
+  public constructor(opts: MemLocalHistoryOptions = {}) {
     const { storage, maxSize } = opts;
     this.maxSize = maxSize ?? DEFAULT_MAX_LENGTH;
     if (storage instanceof PersistentStorage) {
