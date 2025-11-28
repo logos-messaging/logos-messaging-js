@@ -297,9 +297,8 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
           message.messageId,
           message.causalHistory.map((ch) => ch.messageId)
         );
-        const missingDependencies = message.causalHistory.filter(
-          (messageHistoryEntry) =>
-            !this.isMessageAvailable(messageHistoryEntry.messageId)
+        const missingDependencies = this.findMissingDependencies(
+          message.causalHistory
         );
         if (missingDependencies.length === 0) {
           if (isContentMessage(message) && this.deliverMessage(message)) {
@@ -583,9 +582,8 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
       this.filter.insert(message.messageId);
     }
 
-    const missingDependencies = message.causalHistory.filter(
-      (messageHistoryEntry) =>
-        !this.isMessageAvailable(messageHistoryEntry.messageId)
+    const missingDependencies = this.findMissingDependencies(
+      message.causalHistory
     );
 
     if (missingDependencies.length > 0) {
@@ -737,6 +735,17 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
         throw error;
       }
     }
+  }
+
+  private findMissingDependencies(entries: HistoryEntry[]): HistoryEntry[] {
+    const missingFromHistory =
+      this.localHistory.findMissingDependencies(entries);
+
+    const incomingIds = new Set(this.incomingBuffer.map((m) => m.messageId));
+
+    return missingFromHistory.filter(
+      (entry) => !incomingIds.has(entry.messageId)
+    );
   }
 
   /**

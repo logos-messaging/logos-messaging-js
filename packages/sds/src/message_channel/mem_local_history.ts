@@ -1,7 +1,12 @@
 import { Logger } from "@waku/utils";
 import _ from "lodash";
 
-import { type ChannelId, ContentMessage, isContentMessage } from "./message.js";
+import {
+  type ChannelId,
+  ContentMessage,
+  type HistoryEntry,
+  isContentMessage
+} from "./message.js";
 import { PersistentStorage } from "./persistent_storage.js";
 
 export const DEFAULT_MAX_LENGTH = 10_000;
@@ -26,6 +31,7 @@ export interface ILocalHistory {
   getMessage(messageId: string): ContentMessage | undefined;
   getRecentMessages(count: number): ContentMessage[];
   getAllMessages(): ContentMessage[];
+  findMissingDependencies(entries: HistoryEntry[]): HistoryEntry[];
 }
 
 export type MemLocalHistoryOptions = {
@@ -112,6 +118,10 @@ export class MemLocalHistory implements ILocalHistory {
 
   public getMessage(messageId: string): ContentMessage | undefined {
     return this.messageIndex.get(messageId);
+  }
+
+  public findMissingDependencies(entries: HistoryEntry[]): HistoryEntry[] {
+    return entries.filter((entry) => !this.messageIndex.has(entry.messageId));
   }
 
   private rebuildIndex(): void {
