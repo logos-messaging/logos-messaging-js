@@ -40,7 +40,7 @@ async function main() {
 
     // Install dependencies
     console.log("📦 Installing dependencies...");
-    exec("npm install", { cwd: CONTRACT_DIR });
+    exec("pnpm i", { cwd: CONTRACT_DIR });
 
     // Build contracts with Foundry
     console.log("🔨 Building contracts with Foundry...");

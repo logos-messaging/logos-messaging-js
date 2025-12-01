@@ -354,6 +354,13 @@ export const wakuRlnV2Abi = [
   {
     type: "function",
     inputs: [],
+    name: "HISTORY_SIZE",
+    outputs: [{ name: "", internalType: "uint8", type: "uint8" }],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    inputs: [],
     name: "MAX_MEMBERSHIP_SET_SIZE",
     outputs: [{ name: "", internalType: "uint32", type: "uint32" }],
     stateMutability: "view"
@@ -459,6 +466,22 @@ export const wakuRlnV2Abi = [
     ],
     name: "getRateCommitmentsInRangeBoundsInclusive",
     outputs: [{ name: "", internalType: "uint256[]", type: "uint256[]" }],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "getRecentRoots",
+    outputs: [
+      { name: "ordered", internalType: "uint256[5]", type: "uint256[5]" }
+    ],
+    stateMutability: "view"
+  },
+  {
+    type: "function",
+    inputs: [{ name: "position", internalType: "uint8", type: "uint8" }],
+    name: "getRootAt",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
     stateMutability: "view"
   },
   {
@@ -908,6 +931,19 @@ export const wakuRlnV2Abi = [
       }
     ],
     name: "OwnershipTransferred"
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      {
+        name: "newRoot",
+        internalType: "uint256",
+        type: "uint256",
+        indexed: false
+      }
+    ],
+    name: "RootStored"
   },
   {
     type: "event",
