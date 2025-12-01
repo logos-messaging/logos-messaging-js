@@ -17,6 +17,7 @@ jobs:
           - uses: actions/checkout@v4
             with:
               repository: waku-org/js-waku
+              ref: ${{ github.ref }}
 
           - uses: actions/setup-node@v4
             with:
