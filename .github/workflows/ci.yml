@@ -113,6 +113,11 @@ jobs:
           node-version: ${{ env.NODE_JS }}
           registry-url: "https://registry.npmjs.org"
 
+      - uses: pnpm/action-setup@v4
+        if: ${{ steps.release.outputs.releases_created }}
+        with:
+          version: 9
+
       - run: npm install
         if: ${{ steps.release.outputs.releases_created }}
 
