@@ -15,6 +15,7 @@ import {
   CreateLibp2pOptions,
   IEncoder,
   ILightPush,
+  IMessage,
 } from "@waku/interfaces";
 import { bootstrap } from "@libp2p/bootstrap";
 import { EnrDecoder, TransportProtocol } from "@waku/enr";
@@ -22,6 +23,7 @@ import type { Multiaddr } from "@multiformats/multiaddr";
 import type { ITestBrowser } from "../types/global.js";
 import { Logger, StaticShardingRoutingInfo } from "@waku/utils";
 import type { PeerId } from "@libp2p/interface";
+import { messageHashStr } from "@waku/core";
 
 const log = new Logger("waku-headless");
 
@@ -32,6 +34,8 @@ export interface SerializableSDKProtocolResult {
     peerId?: string;
   }>;
   myPeerId?: string;
+  messageHash?: string;
+  timestamp?: number;
 }
 
 function makeSerializable(result: { successes: PeerId[], failures: Array<{ error: any, peerId?: PeerId }> }): SerializableSDKProtocolResult {
@@ -155,12 +159,9 @@ export class WakuHeadless {
   private async send(
     lightPush: ILightPush,
     encoder: IEncoder,
-    payload: Uint8Array,
+    message: IMessage,
   ) {
-    return lightPush.send(encoder, {
-      payload,
-      timestamp: new Date(),
-    });
+    return lightPush.send(encoder, message);
   }
 
   async pushMessageV3(
@@ -192,6 +193,11 @@ export class WakuHeadless {
       processedPayload = new TextEncoder().encode(payload);
     }
 
+    const message: IMessage = {
+      payload: processedPayload,
+      timestamp: new Date(),
+    };
+
     try {
       const lightPush = this.waku.lightPush;
       if (!lightPush) {
@@ -216,6 +222,11 @@ export class WakuHeadless {
       log.info("Pubsub topic:", pubsubTopic);
       log.info("Encoder pubsub topic:", encoder.pubsubTopic);
 
+      const protoObj = await encoder.toProtoObj(message);
+      if (!protoObj) {
+        throw new Error("Failed to convert message to proto object");
+      }
+
       if (pubsubTopic && pubsubTopic !== encoder.pubsubTopic) {
         log.warn(
           `Explicit pubsubTopic ${pubsubTopic} provided, but auto-sharding determined ${encoder.pubsubTopic}. Using auto-sharding.`,
@@ -229,7 +240,7 @@ export class WakuHeadless {
             this.lightpushNode,
           );
           if (preferredPeerId) {
-            result = await this.send(lightPush, encoder, processedPayload);
+            result = await this.send(lightPush, encoder, message);
             log.info("✅ Message sent via preferred lightpush node");
           } else {
             throw new Error(
@@ -241,13 +252,22 @@ export class WakuHeadless {
             "Couldn't send message via preferred lightpush node:",
             error,
           );
-          result = await this.send(lightPush, encoder, processedPayload);
+          result = await this.send(lightPush, encoder, message);
         }
       } else {
-        result = await this.send(lightPush, encoder, processedPayload);
+        result = await this.send(lightPush, encoder, message);
       }
 
-      const serializableResult = makeSerializable(result);
+      let serializableResult = makeSerializable(result);
+
+      serializableResult.myPeerId = this.waku.libp2p.peerId.toString();
+
+      const messageHash = '0x' + messageHashStr(
+        encoder.pubsubTopic,
+        protoObj,
+      );
+
+      serializableResult.messageHash = messageHash;
 
       return serializableResult;
     } catch (error) {
