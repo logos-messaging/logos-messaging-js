@@ -81,7 +81,7 @@ router.post(
       } else {
         return {
           success: false,
-          error: "Could not publish message: no suitable peers",
+          error: lightPushResult.failures[0].error,
         };
       }
     },
