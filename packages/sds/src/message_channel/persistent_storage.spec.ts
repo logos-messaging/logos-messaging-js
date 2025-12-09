@@ -1,6 +1,6 @@
 import { expect } from "chai";
 
-import { MemLocalHistory } from "./mem_local_history.js";
+import { LocalHistory } from "./local_history.js";
 import { ContentMessage } from "./message.js";
 import { HistoryStorage, PersistentStorage } from "./persistent_storage.js";
 
@@ -14,11 +14,11 @@ describe("PersistentStorage", () => {
 
       expect(persistentStorage).to.not.be.undefined;
 
-      const history1 = new MemLocalHistory({ storage: persistentStorage });
+      const history1 = new LocalHistory({ storage: persistentStorage });
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
 
-      const history2 = new MemLocalHistory({ storage: persistentStorage });
+      const history2 = new LocalHistory({ storage: persistentStorage });
 
       expect(history2.length).to.equal(2);
       expect(history2.slice(0).map((msg) => msg.messageId)).to.deep.equal([
@@ -28,13 +28,13 @@ describe("PersistentStorage", () => {
     });
 
     it("uses in-memory only when no storage is provided", () => {
-      const history = new MemLocalHistory({ maxSize: 100 });
+      const history = new LocalHistory({ maxSize: 100 });
       history.push(createMessage("msg-3", 3));
 
       expect(history.length).to.equal(1);
       expect(history.slice(0)[0].messageId).to.equal("msg-3");
 
-      const history2 = new MemLocalHistory({ maxSize: 100 });
+      const history2 = new LocalHistory({ maxSize: 100 });
       expect(history2.length).to.equal(0);
     });
 
@@ -44,7 +44,7 @@ describe("PersistentStorage", () => {
       storage.setItem("waku:sds:history:channel-1", "{ invalid json }");
 
       const persistentStorage = PersistentStorage.create(channelId, storage);
-      const history = new MemLocalHistory({ storage: persistentStorage });
+      const history = new LocalHistory({ storage: persistentStorage });
 
       expect(history.length).to.equal(0);
 
@@ -58,8 +58,8 @@ describe("PersistentStorage", () => {
       const storage1 = PersistentStorage.create("channel-1", storage);
       const storage2 = PersistentStorage.create("channel-2", storage);
 
-      const history1 = new MemLocalHistory({ storage: storage1 });
-      const history2 = new MemLocalHistory({ storage: storage2 });
+      const history1 = new LocalHistory({ storage: storage1 });
+      const history2 = new LocalHistory({ storage: storage2 });
 
       history1.push(createMessage("msg-1", 1));
       history2.push(createMessage("msg-2", 2));
@@ -77,7 +77,7 @@ describe("PersistentStorage", () => {
     it("saves messages after each push", () => {
       const storage = new MemoryStorage();
       const persistentStorage = PersistentStorage.create(channelId, storage);
-      const history = new MemLocalHistory({ storage: persistentStorage });
+      const history = new LocalHistory({ storage: persistentStorage });
 
       expect(storage.getItem("waku:sds:history:channel-1")).to.be.null;
 
@@ -93,14 +93,14 @@ describe("PersistentStorage", () => {
     it("loads messages on initialization", () => {
       const storage = new MemoryStorage();
       const persistentStorage1 = PersistentStorage.create(channelId, storage);
-      const history1 = new MemLocalHistory({ storage: persistentStorage1 });
+      const history1 = new LocalHistory({ storage: persistentStorage1 });
 
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
       history1.push(createMessage("msg-3", 3));
 
       const persistentStorage2 = PersistentStorage.create(channelId, storage);
-      const history2 = new MemLocalHistory({ storage: persistentStorage2 });
+      const history2 = new LocalHistory({ storage: persistentStorage2 });
 
       expect(history2.length).to.equal(3);
       expect(history2.slice(0).map((m) => m.messageId)).to.deep.equal([
@@ -134,11 +134,11 @@ describe("PersistentStorage", () => {
 
     it("persists and restores messages with channelId", () => {
       const testChannelId = `test-${Date.now()}`;
-      const history1 = new MemLocalHistory({ storage: testChannelId });
+      const history1 = new LocalHistory({ storage: testChannelId });
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
 
-      const history2 = new MemLocalHistory({ storage: testChannelId });
+      const history2 = new LocalHistory({ storage: testChannelId });
 
       expect(history2.length).to.equal(2);
       expect(history2.slice(0).map((msg) => msg.messageId)).to.deep.equal([
@@ -152,11 +152,11 @@ describe("PersistentStorage", () => {
     it("auto-uses localStorage when channelId is provided", () => {
       const testChannelId = `auto-storage-${Date.now()}`;
 
-      const history = new MemLocalHistory({ storage: testChannelId });
+      const history = new LocalHistory({ storage: testChannelId });
       history.push(createMessage("msg-auto-1", 1));
       history.push(createMessage("msg-auto-2", 2));
 
-      const history2 = new MemLocalHistory({ storage: testChannelId });
+      const history2 = new LocalHistory({ storage: testChannelId });
       expect(history2.length).to.equal(2);
       expect(history2.slice(0).map((m) => m.messageId)).to.deep.equal([
         "msg-auto-1",

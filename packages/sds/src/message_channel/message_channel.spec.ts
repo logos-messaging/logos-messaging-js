@@ -4,8 +4,7 @@ import { expect } from "chai";
 import { DefaultBloomFilter } from "../bloom_filter/bloom.js";
 
 import { MessageChannelEvent } from "./events.js";
-import { MemLocalHistory } from "./mem_local_history.js";
-import { ILocalHistory } from "./mem_local_history.js";
+import { LocalHistory } from "./local_history.js";
 import {
   ContentMessage,
   HistoryEntry,
@@ -25,7 +24,7 @@ const callback = (_message: Message): Promise<{ success: boolean }> => {
 };
 
 /**
- * Test helper to create a MessageChannel with MemLocalHistory.
+ * Test helper to create a MessageChannel with LocalHistory.
  * This avoids localStorage pollution in tests and tests core functionality.
  */
 const createTestChannel = (
@@ -33,12 +32,7 @@ const createTestChannel = (
   senderId: string,
   options: MessageChannelOptions = {}
 ): MessageChannel => {
-  return new MessageChannel(
-    channelId,
-    senderId,
-    options,
-    new MemLocalHistory()
-  );
+  return new MessageChannel(channelId, senderId, options, new LocalHistory());
 };
 
 const getBloomFilter = (channel: MessageChannel): DefaultBloomFilter => {
@@ -117,11 +111,11 @@ describe("MessageChannel", function () {
       const expectedTimestamp = channelA["lamportTimestamp"] + 1n;
       const messageId = MessageChannel.getMessageId(payload);
       await sendMessage(channelA, payload, callback);
-      const messageIdLog = channelA["localHistory"] as ILocalHistory;
+      const messageIdLog = channelA["localHistory"] as LocalHistory;
       expect(messageIdLog.length).to.equal(1);
       expect(
         messageIdLog.some(
-          (log) =>
+          (log: ContentMessage) =>
             log.lamportTimestamp === expectedTimestamp &&
             log.messageId === messageId
         )
@@ -138,7 +132,7 @@ describe("MessageChannel", function () {
         return { success: true, retrievalHint: testRetrievalHint };
       });
 
-      const localHistory = channelA["localHistory"] as ILocalHistory;
+      const localHistory = channelA["localHistory"] as LocalHistory;
       expect(localHistory.length).to.equal(1);
 
       // Find the message in local history

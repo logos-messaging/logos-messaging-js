@@ -7,7 +7,7 @@ import { DefaultBloomFilter } from "../bloom_filter/bloom.js";
 
 import { Command, Handlers, ParamsByAction, Task } from "./command_queue.js";
 import { MessageChannelEvent, MessageChannelEvents } from "./events.js";
-import { ILocalHistory, MemLocalHistory } from "./mem_local_history.js";
+import { LocalHistory } from "./local_history.js";
 import {
   ChannelId,
   ContentMessage,
@@ -23,8 +23,6 @@ import {
 } from "./message.js";
 import { RepairConfig, RepairManager } from "./repair/repair.js";
 
-export type { ILocalHistory };
-
 export const DEFAULT_BLOOM_FILTER_OPTIONS = {
   capacity: 10000,
   errorRate: 0.001
@@ -39,6 +37,11 @@ const DEFAULT_CAUSAL_HISTORY_SIZE = 200;
 const DEFAULT_POSSIBLE_ACKS_THRESHOLD = 2;
 
 const log = new Logger("sds:message-channel");
+
+export type ILocalHistory = Pick<
+  Array<ContentMessage>,
+  "some" | "push" | "slice" | "find" | "length" | "findIndex"
+>;
 
 export interface MessageChannelOptions {
   causalHistorySize?: number;
@@ -115,7 +118,7 @@ export class MessageChannel extends TypedEventEmitter<MessageChannelEvents> {
     this.possibleAcks = new Map();
     this.incomingBuffer = [];
     this.localHistory =
-      localHistory ?? new MemLocalHistory({ storage: channelId });
+      localHistory ?? new LocalHistory({ storage: channelId });
     this.causalHistorySize =
       options.causalHistorySize ?? DEFAULT_CAUSAL_HISTORY_SIZE;
     // TODO: this should be determined based on the bloom filter parameters and number of hashes

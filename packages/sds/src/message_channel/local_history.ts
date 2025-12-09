@@ -2,6 +2,7 @@ import { Logger } from "@waku/utils";
 import _ from "lodash";
 
 import { type ChannelId, ContentMessage, isContentMessage } from "./message.js";
+import { ILocalHistory } from "./message_channel.js";
 import { PersistentStorage } from "./persistent_storage.js";
 
 export const DEFAULT_MAX_LENGTH = 10_000;
@@ -19,44 +20,15 @@ export const DEFAULT_MAX_LENGTH = 10_000;
  * If an array of items longer than `maxLength` is pushed, dropping will happen
  * at next push.
  */
-export interface ILocalHistory {
-  length: number;
-  push(...items: ContentMessage[]): number;
-  some(
-    predicate: (
-      value: ContentMessage,
-      index: number,
-      array: ContentMessage[]
-    ) => unknown,
-    thisArg?: any
-  ): boolean;
-  slice(start?: number, end?: number): ContentMessage[];
-  find(
-    predicate: (
-      value: ContentMessage,
-      index: number,
-      obj: ContentMessage[]
-    ) => unknown,
-    thisArg?: any
-  ): ContentMessage | undefined;
-  findIndex(
-    predicate: (
-      value: ContentMessage,
-      index: number,
-      obj: ContentMessage[]
-    ) => unknown,
-    thisArg?: any
-  ): number;
-}
 
-export type MemLocalHistoryOptions = {
+export type LocalHistoryOptions = {
   storage?: ChannelId | PersistentStorage;
   maxSize?: number;
 };
 
 const log = new Logger("sds:local-history");
 
-export class MemLocalHistory implements ILocalHistory {
+export class LocalHistory implements ILocalHistory {
   private items: ContentMessage[] = [];
   private readonly storage?: PersistentStorage;
   private readonly maxSize: number;
@@ -68,7 +40,7 @@ export class MemLocalHistory implements ILocalHistory {
    *   - storage: Optional persistent storage backend for message persistence or channelId to use with PersistentStorage.
    *   - maxSize: The maximum number of messages to store. Optional, defaults to DEFAULT_MAX_LENGTH.
    */
-  public constructor(opts: MemLocalHistoryOptions = {}) {
+  public constructor(opts: LocalHistoryOptions = {}) {
     const { storage, maxSize } = opts;
     this.maxSize = maxSize ?? DEFAULT_MAX_LENGTH;
     if (storage instanceof PersistentStorage) {
