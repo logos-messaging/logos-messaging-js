@@ -185,7 +185,7 @@ describe("MessageChannel", function () {
       expect(timestampAfter).to.equal(timestampBefore + 1n);
     });
 
-    // TODO: test is failing in CI, investigate in https://github.com/waku-org/js-waku/issues/2648
+    // TODO: test is failing in CI, investigate in https://github.com/logos-messaging/logos-messaging-js/issues/2648
     it.skip("should update lamport timestamp if greater than current timestamp and dependencies are met", async () => {
       const testChannelA = new MessageChannel(channelId, "alice");
       const testChannelB = new MessageChannel(channelId, "bob");
@@ -207,7 +207,7 @@ describe("MessageChannel", function () {
       );
     });
 
-    // TODO: test is failing in CI, investigate in https://github.com/waku-org/js-waku/issues/2648
+    // TODO: test is failing in CI, investigate in https://github.com/logos-messaging/logos-messaging-js/issues/2648
     it.skip("should maintain proper timestamps if all messages received", async () => {
       const aTimestampBefore = channelA["lamportTimestamp"];
       let timestamp = channelB["lamportTimestamp"];

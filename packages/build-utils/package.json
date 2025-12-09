@@ -1,7 +1,7 @@
 {
   "name": "@waku/build-utils",
   "version": "1.0.0",
-  "description": "Build utilities for js-waku",
+  "description": "Build utilities for logos-messaging-js",
   "main": "index.js",
   "module": "index.js",
   "type": "module",
@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/waku-org/js-waku.git"
+    "url": "git+https://github.com/logos-messaging/logos-messaging-js.git"
   },
   "author": "Waku Team",
   "license": "MIT OR Apache-2.0",
   "bugs": {
-    "url": "https://github.com/waku-org/js-waku/issues"
+    "url": "https://github.com/logos-messaging/logos-messaging-js/issues"
   },
-  "homepage": "https://github.com/waku-org/js-waku#readme"
+  "homepage": "https://github.com/logos-messaging/logos-messaging-js#readme"
 }

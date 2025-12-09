@@ -13,8 +13,8 @@ const Args = process.argv.slice(2);
 const USE_HTTPS = Args[0] && Args[0].toUpperCase() === "HTTPS";
 
 const branch = "gh-pages";
-const org = "waku-org";
-const repo = "js-waku";
+const org = "logos-messaging";
+const repo = "logos-messaging-js";
 /* use SSH auth by default */
 let repoUrl = USE_HTTPS
   ? `https://github.com/${org}/${repo}.git`

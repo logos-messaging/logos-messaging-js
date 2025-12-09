@@ -138,7 +138,7 @@ describe("Waku Relay, Publish", function () {
     });
   });
 
-  // Will be skipped until https://github.com/waku-org/js-waku/issues/1464 si done
+  // Will be skipped until https://github.com/logos-messaging/logos-messaging-js/issues/1464 si done
   it.skip("Check publish message after service node is restarted", async function () {
     await waku1.relay.send(TestEncoder, {
       payload: utf8ToBytes("m1")
@@ -163,7 +163,7 @@ describe("Waku Relay, Publish", function () {
     expect(await messageCollector.waitForMessages(2)).to.eq(true);
   });
 
-  // Will be skipped until https://github.com/waku-org/js-waku/issues/1464 si done
+  // Will be skipped until https://github.com/logos-messaging/logos-messaging-js/issues/1464 si done
   it.skip("Check publish message after client node is restarted", async function () {
     await waku1.relay.send(TestEncoder, {
       payload: utf8ToBytes("m1")

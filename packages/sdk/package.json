@@ -1,7 +1,7 @@
 {
   "name": "@waku/sdk",
   "version": "0.0.36",
-  "description": "A unified SDK for easy creation and management of js-waku nodes.",
+  "description": "A unified SDK for easy creation and management of logos-messaging-js nodes.",
   "types": "./dist/index.d.ts",
   "module": "./dist/index.js",
   "exports": {
@@ -21,17 +21,18 @@
   },
   "type": "module",
   "author": "Waku Team",
-  "homepage": "https://github.com/waku-org/js-waku/tree/master/packages/sdk#readme",
+  "homepage": "https://github.com/logos-messaging/logos-messaging-js/tree/master/packages/sdk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/waku-org/js-waku.git"
+    "url": "git+https://github.com/logos-messaging/logos-messaging-js.git"
   },
   "bugs": {
-    "url": "https://github.com/waku-org/js-waku/issues"
+    "url": "https://github.com/logos-messaging/logos-messaging-js/issues"
   },
   "license": "MIT OR Apache-2.0",
   "keywords": [
     "waku",
+    "logos-messaging",
     "decentralized",
     "secure",
     "communication",

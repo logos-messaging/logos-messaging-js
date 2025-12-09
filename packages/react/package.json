@@ -1,7 +1,7 @@
 {
   "name": "@waku/react",
   "version": "0.0.8",
-  "description": "React hooks and components to use js-waku",
+  "description": "React hooks and components to use logos-messaging-js",
   "type": "module",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.mjs",
@@ -18,17 +18,18 @@
     }
   },
   "author": "Waku Team",
-  "homepage": "https://github.com/waku-org/js-waku/tree/master/packages/react#readme",
+  "homepage": "https://github.com/logos-messaging/logos-messaging-js/tree/master/packages/react#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/waku-org/js-waku.git"
+    "url": "git+https://github.com/logos-messaging/logos-messaging-js.git"
   },
   "bugs": {
-    "url": "https://github.com/waku-org/js-waku/issues"
+    "url": "https://github.com/logos-messaging/logos-messaging-js/issues"
   },
   "license": "MIT OR Apache-2.0",
   "keywords": [
     "waku",
+    "logos-messaging",
     "decentralized",
     "secure",
     "communication",

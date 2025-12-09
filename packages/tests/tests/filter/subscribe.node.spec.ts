@@ -296,7 +296,7 @@ const runTests = (strictCheckNodes: boolean): void => {
       });
     });
 
-    // skipped as it fails in CI but not locally https://github.com/waku-org/js-waku/issues/2438
+    // skipped as it fails in CI but not locally https://github.com/logos-messaging/logos-messaging-js/issues/2438
     it.skip("Subscribe to 30 topics in separate streams (30 streams for Filter is limit) at once and receives messages", async function () {
       this.timeout(100_000);
       const topicCount = 30;

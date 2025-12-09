@@ -13,7 +13,7 @@ import {
 
 import { TestRoutingInfo } from "./utils.js";
 
-// TODO: investigate and re-enable in https://github.com/waku-org/js-waku/issues/2453
+// TODO: investigate and re-enable in https://github.com/logos-messaging/logos-messaging-js/issues/2453
 describe.skip("DiscoveryDialer", function () {
   const ctx: Context = this.ctx;
   let waku: LightNode;

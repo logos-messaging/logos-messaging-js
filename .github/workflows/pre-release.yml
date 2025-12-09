@@ -16,7 +16,7 @@ jobs:
         steps:
           - uses: actions/checkout@v4
             with:
-              repository: waku-org/js-waku
+              repository: logos-messaging/logos-messaging-js
               ref: ${{ github.ref }}
 
           - uses: actions/setup-node@v4

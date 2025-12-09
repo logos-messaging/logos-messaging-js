@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: waku-org/js-waku
+          repository: logos-messaging/logos-messaging-js
 
       - name: Remove unwanted software
         uses: ./.github/actions/prune-vm

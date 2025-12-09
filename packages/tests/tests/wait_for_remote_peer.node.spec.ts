@@ -222,7 +222,7 @@ describe("Wait for remote peer", function () {
     expect(peers.includes(nimPeerId as string)).to.be.true;
   });
 
-  // TODO: re-enable store once https://github.com/waku-org/js-waku/issues/2162 is fixed
+  // TODO: re-enable store once https://github.com/logos-messaging/logos-messaging-js/issues/2162 is fixed
   it("Light Node - default protocols", async function () {
     this.timeout(20_000);
     nwaku = new ServiceNode(makeLogFileName(this));

@@ -231,7 +231,7 @@ describe("Waku Relay, Subscribe", function () {
     });
   });
 
-  // Will be skipped until https://github.com/waku-org/js-waku/issues/1678 is fixed
+  // Will be skipped until https://github.com/logos-messaging/logos-messaging-js/issues/1678 is fixed
   it.skip("Refresh subscription", async function () {
     await waku2.relay.subscribeWithUnsubscribe(
       [TestDecoder],
@@ -251,7 +251,7 @@ describe("Waku Relay, Subscribe", function () {
     ).to.eq(true);
   });
 
-  // Will be skipped until https://github.com/waku-org/js-waku/issues/1678 is fixed
+  // Will be skipped until https://github.com/logos-messaging/logos-messaging-js/issues/1678 is fixed
   it.skip("Overlapping topic subscription", async function () {
     // Define two sets of test data with overlapping topics.
     const topicCount1 = 2;

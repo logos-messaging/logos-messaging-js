@@ -86,7 +86,7 @@ const runTests = (strictCheckNodes: boolean): void => {
         await waku.filter.subscribe(decoderShard2, messageCollector2.callback);
 
         // Making sure that messages are send and received for both subscriptions
-        // While loop is done because of https://github.com/waku-org/js-waku/issues/1606
+        // While loop is done because of https://github.com/logos-messaging/logos-messaging-js/issues/1606
         while (
           !(await serviceNodes.messageCollector.waitForMessages(1)) ||
           !(await messageCollector2.waitForMessages(1))
