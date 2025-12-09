@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const CONTRACT_DIR = join(__dirname, "waku-rlnv2-contract");
-const REPO_URL = "https://github.com/waku-org/waku-rlnv2-contract.git";
+const REPO_URL = "https://github.com/logos-messaging/waku-rlnv2-contract.git";
 
 /**
  * Execute a shell command and print output in real-time
