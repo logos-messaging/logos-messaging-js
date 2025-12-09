@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@v3
         continue-on-error: true
         with:
-          repository: waku-org/allure-jswaku
+          repository: logos-messaging/logos-messaging-js-allure
           ref: gh-pages
           path: gh-pages
           token: ${{ env.GITHUB_TOKEN }}
@@ -89,7 +89,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ env.GITHUB_TOKEN }}
-          external_repository: waku-org/allure-jswaku
+          external_repository: logos-messaging/logos-messaging-js-allure
           publish_branch: gh-pages
           publish_dir: allure-history
 
@@ -125,4 +125,4 @@ jobs:
           echo "## Run Information" >> $GITHUB_STEP_SUMMARY
           echo "- **NWAKU**: ${{ env.WAKUNODE_IMAGE }}" >> $GITHUB_STEP_SUMMARY
           echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "Allure report will be available at: https://waku-org.github.io/allure-jswaku/${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "Allure report will be available at: https://logos-messaging.github.io/logos-messaging-js-allure/${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
