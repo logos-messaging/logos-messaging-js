@@ -9,7 +9,7 @@ import {
 
 const log = new Logger("sds:storage");
 
-const STORAGE_PREFIX = "waku:sds:storage:";
+const STORAGE_NAMESPACE = "waku:sds:storage:";
 
 /**
  * Browser localStorage wrapper for message persistence.
@@ -18,7 +18,7 @@ export class Storage {
   private readonly storageKey: string;
 
   public constructor(storagePrefix: string) {
-    this.storageKey = `${STORAGE_PREFIX}${storagePrefix}`;
+    this.storageKey = `${STORAGE_NAMESPACE}${storagePrefix}`;
   }
 
   public save(messages: ContentMessage[]): void {

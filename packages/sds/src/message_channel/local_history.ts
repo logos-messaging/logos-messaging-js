@@ -7,6 +7,23 @@ import { Storage } from "./storage/index.js";
 export const DEFAULT_MAX_LENGTH = 10_000;
 
 /**
+ * Options for the LocalHistory constructor.
+ * @param storage - The storage to use for the local history.
+ *   - prefix - The prefix for the storage.
+ *   - customInstance - The custom storage instance to use.
+ * @param maxSize - The maximum number of messages to store.
+ */
+export type LocalHistoryOptions = {
+  storage?: {
+    prefix?: string;
+    customInstance?: Storage;
+  };
+  maxSize?: number;
+};
+
+const log = new Logger("sds:local-history");
+
+/**
  * In-Memory implementation of a local history of messages.
  *
  * Messages are store in SDS chronological order:
@@ -19,30 +36,11 @@ export const DEFAULT_MAX_LENGTH = 10_000;
  * If an array of items longer than `maxLength` is pushed, dropping will happen
  * at next push.
  */
-
-export type LocalHistoryOptions = {
-  storage?: {
-    prefix?: string;
-    customInstance?: Storage;
-  };
-  maxSize?: number;
-};
-
-const log = new Logger("sds:local-history");
-
 export class LocalHistory {
   private items: ContentMessage[] = [];
   private readonly storage?: Storage;
   private readonly maxSize: number;
 
-  /**
-   * Construct a new in-memory local history.
-   *
-   * @param opts Configuration object.
-   *   - storagePrefix: Optional prefix for persistent storage (creates Storage if provided).
-   *   - storage: Optional explicit Storage instance.
-   *   - maxSize: The maximum number of messages to store. Optional, defaults to DEFAULT_MAX_LENGTH.
-   */
   public constructor(opts: LocalHistoryOptions = {}) {
     const { storage, maxSize } = opts;
     const { prefix, customInstance } = storage ?? {};

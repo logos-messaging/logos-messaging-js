@@ -18,11 +18,11 @@ describe("Storage", () => {
     });
 
     it("persists and restores messages", () => {
-      const history1 = new LocalHistory({ storagePrefix: channelId });
+      const history1 = new LocalHistory({ storage: { prefix: channelId } });
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
 
-      const history2 = new LocalHistory({ storagePrefix: channelId });
+      const history2 = new LocalHistory({ storage: { prefix: channelId } });
 
       expect(history2.length).to.equal(2);
       expect(history2.slice(0).map((msg) => msg.messageId)).to.deep.equal([
@@ -34,15 +34,15 @@ describe("Storage", () => {
     it("handles corrupt data gracefully", () => {
       localStorage.setItem(`waku:sds:storage:${channelId}`, "{ invalid json }");
 
-      const history = new LocalHistory({ storagePrefix: channelId });
+      const history = new LocalHistory({ storage: { prefix: channelId } });
       expect(history.length).to.equal(0);
       // Corrupt data is removed
       expect(localStorage.getItem(`waku:sds:storage:${channelId}`)).to.be.null;
     });
 
     it("isolates history by channel ID", () => {
-      const history1 = new LocalHistory({ storagePrefix: "channel-1" });
-      const history2 = new LocalHistory({ storagePrefix: "channel-2" });
+      const history1 = new LocalHistory({ storage: { prefix: "channel-1" } });
+      const history2 = new LocalHistory({ storage: { prefix: "channel-2" } });
 
       history1.push(createMessage("msg-1", 1));
       history2.push(createMessage("msg-2", 2));
@@ -57,7 +57,7 @@ describe("Storage", () => {
     });
 
     it("saves messages after each push", () => {
-      const history = new LocalHistory({ storagePrefix: channelId });
+      const history = new LocalHistory({ storage: { prefix: channelId } });
 
       expect(localStorage.getItem(`waku:sds:storage:${channelId}`)).to.be.null;
 
@@ -74,13 +74,13 @@ describe("Storage", () => {
     });
 
     it("loads messages on initialization", () => {
-      const history1 = new LocalHistory({ storagePrefix: channelId });
+      const history1 = new LocalHistory({ storage: { prefix: channelId } });
 
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
       history1.push(createMessage("msg-3", 3));
 
-      const history2 = new LocalHistory({ storagePrefix: channelId });
+      const history2 = new LocalHistory({ storage: { prefix: channelId } });
 
       expect(history2.length).to.equal(3);
       expect(history2.slice(0).map((m) => m.messageId)).to.deep.equal([
