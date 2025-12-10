@@ -1,24 +1,13 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { Logger } from "@waku/utils";
 
-import { ChannelId, ContentMessage, HistoryEntry } from "./message.js";
+import { ContentMessage, HistoryEntry } from "../message.js";
 
-const log = new Logger("sds:persistent-storage");
-
-const STORAGE_PREFIX = "waku:sds:storage:";
-
-export interface IStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-}
-
-type StoredCausalEntry = {
+export type StoredCausalEntry = {
   messageId: string;
   retrievalHint?: string;
 };
 
-type StoredContentMessage = {
+export type StoredContentMessage = {
   messageId: string;
   channelId: string;
   senderId: string;
@@ -29,72 +18,7 @@ type StoredContentMessage = {
   retrievalHint?: string;
 };
 
-/**
- * Persistent storage for messages.
- */
-export class PersistentStorage {
-  private readonly storageKey: string;
-
-  /**
-   * Creates a PersistentStorage for a channel, or returns undefined if no storage is available.
-   * If no storage is provided, attempts to use global localStorage (if available).
-   * Returns undefined if no storage is available.
-   */
-  public static create(
-    channelId: ChannelId,
-    storage?: IStorage
-  ): PersistentStorage | undefined {
-    storage =
-      storage ??
-      (typeof localStorage !== "undefined" ? localStorage : undefined);
-    if (!storage) {
-      log.info(
-        `No storage available. Messages will not persist across sessions.
-        If you're using NodeJS, you can provide a storage backend using the storage parameter.`
-      );
-      return undefined;
-    }
-    return new PersistentStorage(channelId, storage);
-  }
-
-  private constructor(
-    channelId: ChannelId,
-    private readonly storage: IStorage
-  ) {
-    this.storageKey = `${STORAGE_PREFIX}${channelId}`;
-  }
-
-  public save(messages: ContentMessage[]): void {
-    try {
-      const payload = JSON.stringify(
-        messages.map((msg) => MessageSerializer.serializeContentMessage(msg))
-      );
-      this.storage.setItem(this.storageKey, payload);
-    } catch (error) {
-      log.error("Failed to save messages to storage:", error);
-    }
-  }
-
-  public load(): ContentMessage[] {
-    try {
-      const raw = this.storage.getItem(this.storageKey);
-      if (!raw) {
-        return [];
-      }
-
-      const stored = JSON.parse(raw) as StoredContentMessage[];
-      return stored
-        .map((record) => MessageSerializer.deserializeContentMessage(record))
-        .filter((message): message is ContentMessage => Boolean(message));
-    } catch (error) {
-      log.error("Failed to load messages from storage:", error);
-      this.storage.removeItem(this.storageKey);
-      return [];
-    }
-  }
-}
-
-class MessageSerializer {
+export class MessageSerializer {
   public static serializeContentMessage(
     message: ContentMessage
   ): StoredContentMessage {

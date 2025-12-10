@@ -1,8 +1,8 @@
 import { Logger } from "@waku/utils";
 import _ from "lodash";
 
-import { type ChannelId, ContentMessage, isContentMessage } from "./message.js";
-import { PersistentStorage } from "./persistent_storage.js";
+import { ContentMessage, isContentMessage } from "./message.js";
+import { Storage } from "./storage/index.js";
 
 export const DEFAULT_MAX_LENGTH = 10_000;
 
@@ -21,7 +21,8 @@ export const DEFAULT_MAX_LENGTH = 10_000;
  */
 
 export type LocalHistoryOptions = {
-  storage?: ChannelId | PersistentStorage;
+  storagePrefix?: string;
+  storage?: Storage;
   maxSize?: number;
 };
 
@@ -29,25 +30,26 @@ const log = new Logger("sds:local-history");
 
 export class LocalHistory {
   private items: ContentMessage[] = [];
-  private readonly storage?: PersistentStorage;
+  private readonly storage?: Storage;
   private readonly maxSize: number;
 
   /**
    * Construct a new in-memory local history.
    *
    * @param opts Configuration object.
-   *   - storage: Optional persistent storage backend for message persistence or channelId to use with PersistentStorage.
+   *   - storagePrefix: Optional prefix for persistent storage (creates Storage if provided).
+   *   - storage: Optional explicit Storage instance.
    *   - maxSize: The maximum number of messages to store. Optional, defaults to DEFAULT_MAX_LENGTH.
    */
   public constructor(opts: LocalHistoryOptions = {}) {
-    const { storage, maxSize } = opts;
+    const { storagePrefix, storage, maxSize } = opts;
     this.maxSize = maxSize ?? DEFAULT_MAX_LENGTH;
-    if (storage instanceof PersistentStorage) {
+    if (storage) {
       this.storage = storage;
-      log.info("Using explicit persistent storage");
-    } else if (typeof storage === "string") {
-      this.storage = PersistentStorage.create(storage);
-      log.info("Creating persistent storage for channel", storage);
+      log.info("Using explicit storage");
+    } else if (storagePrefix) {
+      this.storage = new Storage(storagePrefix);
+      log.info("Creating storage for prefix", storagePrefix);
     } else {
       this.storage = undefined;
       log.info("Using in-memory storage");

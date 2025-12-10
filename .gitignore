@@ -21,3 +21,5 @@ CLAUDE.md
 .env
 postgres-data/
 packages/rln/waku-rlnv2-contract/
+/packages/**/allure-results
+/packages/**/allure-results

@@ -4,6 +4,9 @@
     "description": "Scalable Data Sync implementation for the browser. Based on https://github.com/vacp2p/rfc-index/blob/main/vac/raw/sds.md",
     "types": "./dist/index.d.ts",
     "module": "./dist/index.js",
+    "browser": {
+        "./dist/message_channel/storage/index.js": "./dist/message_channel/storage/browser.js"
+    },
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",

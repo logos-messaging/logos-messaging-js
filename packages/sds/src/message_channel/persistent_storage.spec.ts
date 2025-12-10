@@ -2,23 +2,27 @@ import { expect } from "chai";
 
 import { LocalHistory } from "./local_history.js";
 import { ContentMessage } from "./message.js";
-import { IStorage, PersistentStorage } from "./persistent_storage.js";
 
 const channelId = "channel-1";
 
-describe("PersistentStorage", () => {
-  describe("Explicit storage", () => {
+describe("Storage", () => {
+  describe("Browser localStorage", () => {
+    before(function () {
+      if (typeof localStorage === "undefined") {
+        this.skip();
+      }
+    });
+
+    afterEach(() => {
+      localStorage.removeItem(`waku:sds:storage:${channelId}`);
+    });
+
     it("persists and restores messages", () => {
-      const storage = new MemoryStorage();
-      const persistentStorage = PersistentStorage.create(channelId, storage);
-
-      expect(persistentStorage).to.not.be.undefined;
-
-      const history1 = new LocalHistory({ storage: persistentStorage });
+      const history1 = new LocalHistory({ storagePrefix: channelId });
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
 
-      const history2 = new LocalHistory({ storage: persistentStorage });
+      const history2 = new LocalHistory({ storagePrefix: channelId });
 
       expect(history2.length).to.equal(2);
       expect(history2.slice(0).map((msg) => msg.messageId)).to.deep.equal([
@@ -27,39 +31,18 @@ describe("PersistentStorage", () => {
       ]);
     });
 
-    it("uses in-memory only when no storage is provided", () => {
-      const history = new LocalHistory({ maxSize: 100 });
-      history.push(createMessage("msg-3", 3));
+    it("handles corrupt data gracefully", () => {
+      localStorage.setItem(`waku:sds:storage:${channelId}`, "{ invalid json }");
 
-      expect(history.length).to.equal(1);
-      expect(history.slice(0)[0].messageId).to.equal("msg-3");
-
-      const history2 = new LocalHistory({ maxSize: 100 });
-      expect(history2.length).to.equal(0);
-    });
-
-    it("handles corrupt data in storage gracefully", () => {
-      const storage = new MemoryStorage();
-      // Corrupt data
-      storage.setItem("waku:sds:messages:channel-1", "{ invalid json }");
-
-      const persistentStorage = PersistentStorage.create(channelId, storage);
-      const history = new LocalHistory({ storage: persistentStorage });
-
+      const history = new LocalHistory({ storagePrefix: channelId });
       expect(history.length).to.equal(0);
-
-      // Corrupt data is not saved
-      expect(storage.getItem("waku:sds:messages:channel-1")).to.equal(null);
+      // Corrupt data is removed
+      expect(localStorage.getItem(`waku:sds:storage:${channelId}`)).to.be.null;
     });
 
     it("isolates history by channel ID", () => {
-      const storage = new MemoryStorage();
-
-      const storage1 = PersistentStorage.create("channel-1", storage);
-      const storage2 = PersistentStorage.create("channel-2", storage);
-
-      const history1 = new LocalHistory({ storage: storage1 });
-      const history2 = new LocalHistory({ storage: storage2 });
+      const history1 = new LocalHistory({ storagePrefix: "channel-1" });
+      const history2 = new LocalHistory({ storagePrefix: "channel-2" });
 
       history1.push(createMessage("msg-1", 1));
       history2.push(createMessage("msg-2", 2));
@@ -70,37 +53,34 @@ describe("PersistentStorage", () => {
       expect(history2.length).to.equal(1);
       expect(history2.slice(0)[0].messageId).to.equal("msg-2");
 
-      expect(storage.getItem("waku:sds:messages:channel-1")).to.not.be.null;
-      expect(storage.getItem("waku:sds:messages:channel-2")).to.not.be.null;
+      localStorage.removeItem("waku:sds:storage:channel-2");
     });
 
     it("saves messages after each push", () => {
-      const storage = new MemoryStorage();
-      const persistentStorage = PersistentStorage.create(channelId, storage);
-      const history = new LocalHistory({ storage: persistentStorage });
+      const history = new LocalHistory({ storagePrefix: channelId });
 
-      expect(storage.getItem("waku:sds:messages:channel-1")).to.be.null;
+      expect(localStorage.getItem(`waku:sds:storage:${channelId}`)).to.be.null;
 
       history.push(createMessage("msg-1", 1));
 
-      expect(storage.getItem("waku:sds:messages:channel-1")).to.not.be.null;
+      expect(localStorage.getItem(`waku:sds:storage:${channelId}`)).to.not.be
+        .null;
 
-      const saved = JSON.parse(storage.getItem("waku:sds:messages:channel-1")!);
+      const saved = JSON.parse(
+        localStorage.getItem(`waku:sds:storage:${channelId}`)!
+      );
       expect(saved).to.have.lengthOf(1);
       expect(saved[0].messageId).to.equal("msg-1");
     });
 
     it("loads messages on initialization", () => {
-      const storage = new MemoryStorage();
-      const persistentStorage1 = PersistentStorage.create(channelId, storage);
-      const history1 = new LocalHistory({ storage: persistentStorage1 });
+      const history1 = new LocalHistory({ storagePrefix: channelId });
 
       history1.push(createMessage("msg-1", 1));
       history1.push(createMessage("msg-2", 2));
       history1.push(createMessage("msg-3", 3));
 
-      const persistentStorage2 = PersistentStorage.create(channelId, storage);
-      const history2 = new LocalHistory({ storage: persistentStorage2 });
+      const history2 = new LocalHistory({ storagePrefix: channelId });
 
       expect(history2.length).to.equal(3);
       expect(history2.slice(0).map((m) => m.messageId)).to.deep.equal([
@@ -111,59 +91,16 @@ describe("PersistentStorage", () => {
     });
   });
 
-  describe("Node.js only (no localStorage)", () => {
-    before(function () {
-      if (typeof localStorage !== "undefined") {
-        this.skip();
-      }
-    });
+  describe("In-memory fallback", () => {
+    it("uses in-memory only when no storage is provided", () => {
+      const history = new LocalHistory({ maxSize: 100 });
+      history.push(createMessage("msg-3", 3));
 
-    it("returns undefined when no storage is available", () => {
-      const persistentStorage = PersistentStorage.create(channelId, undefined);
+      expect(history.length).to.equal(1);
+      expect(history.slice(0)[0].messageId).to.equal("msg-3");
 
-      expect(persistentStorage).to.equal(undefined);
-    });
-  });
-
-  describe("Browser only (localStorage)", () => {
-    before(function () {
-      if (typeof localStorage === "undefined") {
-        this.skip();
-      }
-    });
-
-    it("persists and restores messages with channelId", () => {
-      const testChannelId = `test-${Date.now()}`;
-      const history1 = new LocalHistory({ storage: testChannelId });
-      history1.push(createMessage("msg-1", 1));
-      history1.push(createMessage("msg-2", 2));
-
-      const history2 = new LocalHistory({ storage: testChannelId });
-
-      expect(history2.length).to.equal(2);
-      expect(history2.slice(0).map((msg) => msg.messageId)).to.deep.equal([
-        "msg-1",
-        "msg-2"
-      ]);
-
-      localStorage.removeItem(`waku:sds:messages:${testChannelId}`);
-    });
-
-    it("auto-uses localStorage when channelId is provided", () => {
-      const testChannelId = `auto-storage-${Date.now()}`;
-
-      const history = new LocalHistory({ storage: testChannelId });
-      history.push(createMessage("msg-auto-1", 1));
-      history.push(createMessage("msg-auto-2", 2));
-
-      const history2 = new LocalHistory({ storage: testChannelId });
-      expect(history2.length).to.equal(2);
-      expect(history2.slice(0).map((m) => m.messageId)).to.deep.equal([
-        "msg-auto-1",
-        "msg-auto-2"
-      ]);
-
-      localStorage.removeItem(`waku:sds:messages:${testChannelId}`);
+      const history2 = new LocalHistory({ maxSize: 100 });
+      expect(history2.length).to.equal(0);
     });
   });
 });
@@ -180,19 +117,3 @@ const createMessage = (id: string, timestamp: number): ContentMessage => {
     undefined
   );
 };
-
-class MemoryStorage implements IStorage {
-  private readonly store = new Map<string, string>();
-
-  public getItem(key: string): string | null {
-    return this.store.get(key) ?? null;
-  }
-
-  public setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  public removeItem(key: string): void {
-    this.store.delete(key);
-  }
-}
