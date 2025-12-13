@@ -61,6 +61,7 @@
     "@wagmi/cli": "^2.7.0",
     "@waku/build-utils": "^1.0.0",
     "@waku/message-encryption": "^0.0.37",
+    "@waku/sdk": "^0.0.36",
     "deep-equal-in-any-order": "^2.0.6",
     "fast-check": "^3.23.2",
     "rollup-plugin-copy": "^3.5.0"

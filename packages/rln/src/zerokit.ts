@@ -5,7 +5,7 @@ import { DEFAULT_RATE_LIMIT, RATE_LIMIT_PARAMS } from "./contract/constants.js";
 import { IdentityCredential } from "./identity.js";
 import { WitnessCalculator } from "./resources/witness_calculator";
 import { BytesUtils } from "./utils/bytes.js";
-import { dateToEpoch, epochIntToBytes } from "./utils/epoch.js";
+import { dateToEpochBytes } from "./utils/epoch.js";
 import { poseidonHash, sha256 } from "./utils/hash.js";
 import { MERKLE_TREE_DEPTH } from "./utils/merkle.js";
 
@@ -13,10 +13,13 @@ export class Zerokit {
   public constructor(
     private readonly zkRLN: number,
     private readonly witnessCalculator: WitnessCalculator,
-    private readonly _rateLimit: number = DEFAULT_RATE_LIMIT,
-    private readonly rlnIdentifier: Uint8Array = new TextEncoder().encode(
-      "rln/waku-rln-relay/v2.0.0"
-    )
+    public readonly rateLimit: number = DEFAULT_RATE_LIMIT,
+    public readonly rlnIdentifier: Uint8Array = (() => {
+      const encoded = new TextEncoder().encode("rln/waku-rln-relay/v2.0.0");
+      const padded = new Uint8Array(32);
+      padded.set(encoded);
+      return padded;
+    })()
   ) {}
 
   public get getZkRLN(): number {
@@ -25,10 +28,6 @@ export class Zerokit {
 
   public get getWitnessCalculator(): WitnessCalculator {
     return this.witnessCalculator;
-  }
-
-  public get rateLimit(): number {
-    return this._rateLimit;
   }
 
   public generateSeededIdentityCredential(seed: string): IdentityCredential {
@@ -84,18 +83,18 @@ export class Zerokit {
 
   public async generateRLNProof(
     msg: Uint8Array,
-    epoch: Uint8Array | Date | undefined,
+    timestamp: Date,
     idSecretHash: Uint8Array,
     pathElements: Uint8Array[],
     identityPathIndex: Uint8Array[],
     rateLimit: number,
     messageId: number // number of message sent by the user in this epoch
-  ): Promise<Uint8Array> {
-    if (epoch === undefined) {
-      epoch = epochIntToBytes(dateToEpoch(new Date()));
-    } else if (epoch instanceof Date) {
-      epoch = epochIntToBytes(dateToEpoch(epoch));
-    }
+  ): Promise<{
+    proof: Uint8Array;
+    epoch: Uint8Array;
+    rlnIdentifier: Uint8Array;
+  }> {
+    const epoch = dateToEpochBytes(timestamp);
 
     if (epoch.length !== 32)
       throw new Error(`Epoch must be 32 bytes, got ${epoch.length}`);
@@ -137,11 +136,16 @@ export class Zerokit {
     ) as Record<string, unknown>;
     const calculatedWitness: bigint[] =
       await this.witnessCalculator.calculateWitness(witnessJson);
-    return zerokitRLN.generateRLNProofWithWitness(
+    const proof = zerokitRLN.generateRLNProofWithWitness(
       this.zkRLN,
       calculatedWitness,
       serializedWitness
     );
+    return {
+      proof,
+      epoch,
+      rlnIdentifier: this.rlnIdentifier
+    };
   }
 
   public verifyRLNProof(
