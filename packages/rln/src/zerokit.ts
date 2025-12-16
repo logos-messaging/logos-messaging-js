@@ -97,8 +97,12 @@ export class Zerokit {
       epoch = epochIntToBytes(dateToEpoch(epoch));
     }
 
-    if (epoch.length !== 32) throw new Error("invalid epoch");
-    if (idSecretHash.length !== 32) throw new Error("invalid id secret hash");
+    if (epoch.length !== 32)
+      throw new Error(`Epoch must be 32 bytes, got ${epoch.length}`);
+    if (idSecretHash.length !== 32)
+      throw new Error(
+        `ID secret hash must be 32 bytes, got ${idSecretHash.length}`
+      );
     if (index < 0) throw new Error("index must be >= 0");
     if (
       rateLimit < RATE_LIMIT_PARAMS.MIN_RATE ||
