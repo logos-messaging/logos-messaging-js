@@ -7,6 +7,7 @@ import { WitnessCalculator } from "./resources/witness_calculator";
 import { BytesUtils } from "./utils/bytes.js";
 import { dateToEpoch, epochIntToBytes } from "./utils/epoch.js";
 import { poseidonHash, sha256 } from "./utils/hash.js";
+import { MERKLE_TREE_DEPTH } from "./utils/merkle.js";
 
 export class Zerokit {
   public constructor(
@@ -83,7 +84,6 @@ export class Zerokit {
 
   public async generateRLNProof(
     msg: Uint8Array,
-    index: number, // index of the leaf in the merkle tree
     epoch: Uint8Array | Date | undefined,
     idSecretHash: Uint8Array,
     pathElements: Uint8Array[],
@@ -103,7 +103,10 @@ export class Zerokit {
       throw new Error(
         `ID secret hash must be 32 bytes, got ${idSecretHash.length}`
       );
-    if (index < 0) throw new Error("index must be >= 0");
+    if (pathElements.length !== MERKLE_TREE_DEPTH)
+      throw new Error(`Path elements must be ${MERKLE_TREE_DEPTH} bytes`);
+    if (identityPathIndex.length !== MERKLE_TREE_DEPTH)
+      throw new Error(`Identity path index must be ${MERKLE_TREE_DEPTH} bytes`);
     if (
       rateLimit < RATE_LIMIT_PARAMS.MIN_RATE ||
       rateLimit > RATE_LIMIT_PARAMS.MAX_RATE

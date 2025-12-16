@@ -71,7 +71,6 @@ describe("RLN Proof Integration Tests", function () {
 
     const proof = await rlnInstance.zerokit.generateRLNProof(
       testMessage,
-      Number(membershipIndex),
       new Date(),
       credential.identity.IDSecretHash,
       merkleProof.map((element) =>
