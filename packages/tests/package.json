@@ -83,7 +83,7 @@
     "allure-commandline": "^2.27.0",
     "allure-mocha": "^2.9.2",
     "chai": "^4.3.10",
-    "cspell": "^8.6.1",
+    "cspell": "^9.4.0",
     "datastore-core": "10.0.4",
     "debug": "^4.3.4",
     "interface-datastore": "8.3.2",

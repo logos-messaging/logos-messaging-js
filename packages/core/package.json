@@ -91,7 +91,7 @@
     "@waku/build-utils": "*",
     "chai": "^4.3.10",
     "sinon": "^18.0.0",
-    "cspell": "^8.6.1",
+    "cspell": "^9.4.0",
     "fast-check": "^3.19.0",
     "ignore-loader": "^0.1.2",
     "isomorphic-fetch": "^3.0.0",

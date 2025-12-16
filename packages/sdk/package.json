@@ -88,7 +88,7 @@
     "@waku/build-utils": "*",
     "@waku/message-encryption": "^0.0.38",
     "chai": "^5.1.1",
-    "cspell": "^8.6.1",
+    "cspell": "^9.4.0",
     "interface-datastore": "8.3.2",
     "mocha": "^10.7.3",
     "npm-run-all": "^4.1.5",

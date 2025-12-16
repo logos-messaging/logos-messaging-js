@@ -69,7 +69,7 @@
     "@typescript-eslint/parser": "^7.1.1",
     "@waku/build-utils": "*",
     "chai": "^5.1.1",
-    "cspell": "^8.6.1",
+    "cspell": "^9.4.0",
     "eslint": "^8.34.0",
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-prettier": "^4.2.1",
