@@ -50,30 +50,34 @@ export class BytesUtils {
   }
 
   /**
-   * Convert a BigInt to a Uint8Array with configurable output endianness
-   * @param value - The BigInt to convert
-   * @param byteLength - The desired byte length of the output (optional, auto-calculated if not provided)
+   * Convert a BigInt to a bytes32 (32-byte Uint8Array)
+   * @param value - The BigInt to convert (must fit in 32 bytes)
    * @param outputEndianness - Endianness of the output bytes ('big' or 'little')
-   * @returns Uint8Array representation of the BigInt
+   * @returns 32-byte Uint8Array representation of the BigInt
    */
-  public static fromBigInt(
+  public static bytes32FromBigInt(
     value: bigint,
-    byteLength: number,
     outputEndianness: "big" | "little" = "little"
   ): Uint8Array {
     if (value < 0n) {
       throw new Error("Cannot convert negative BigInt to bytes");
     }
 
-    if (value === 0n) {
-      return new Uint8Array(byteLength);
+    if (value >> 256n !== 0n) {
+      throw new Error(
+        `BigInt value is too large to fit in 32 bytes (max bit length: 256)`
+      );
     }
 
-    const result = new Uint8Array(byteLength);
+    if (value === 0n) {
+      return new Uint8Array(32);
+    }
+
+    const result = new Uint8Array(32);
     let workingValue = value;
 
     // Extract bytes in big-endian order
-    for (let i = byteLength - 1; i >= 0; i--) {
+    for (let i = 31; i >= 0; i--) {
       result[i] = Number(workingValue & 0xffn);
       workingValue = workingValue >> 8n;
     }

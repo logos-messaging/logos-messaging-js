@@ -26,64 +26,23 @@ export function reconstructMerkleRoot(
     );
   }
 
-  let currentValue = leafValue;
+  let currentValue = BytesUtils.bytes32FromBigInt(leafValue);
 
-  // Process each level of the tree (0 to MERKLE_TREE_DEPTH-1)
   for (let level = 0; level < MERKLE_TREE_DEPTH; level++) {
-    // Check if bit `level` is set in the leaf index
     const bit = (leafIndex >> BigInt(level)) & 1n;
 
-    // Convert bigints to Uint8Array for hashing
-    const currentBytes = bigIntToBytes32(currentValue);
-    const proofBytes = bigIntToBytes32(proof[level]);
-
-    let hashResult: Uint8Array;
+    const proofBytes = BytesUtils.bytes32FromBigInt(proof[level]);
 
     if (bit === 0n) {
       // Current node is a left child: hash(current, proof[level])
-      hashResult = poseidonHash(currentBytes, proofBytes);
+      currentValue = poseidonHash(currentValue, proofBytes);
     } else {
       // Current node is a right child: hash(proof[level], current)
-      hashResult = poseidonHash(proofBytes, currentBytes);
-    }
-
-    // Convert hash result back to bigint for next iteration
-    currentValue = BytesUtils.toBigInt(hashResult, "little");
-  }
-
-  return currentValue;
-}
-
-/**
- * Extracts index information from a Merkle proof by attempting to reconstruct
- * the root with different possible indices and comparing against the expected root
- *
- * @param proof - Array of MERKLE_TREE_DEPTH bigint elements representing the Merkle proof
- * @param leafValue - The value of the leaf (typically the rate commitment)
- * @param expectedRoot - The expected root to match against
- * @param maxIndex - Maximum index to try (default: 2^MERKLE_TREE_DEPTH - 1)
- * @returns The index that produces the expected root, or null if not found
- */
-function extractIndexFromProof(
-  proof: readonly bigint[],
-  leafValue: bigint,
-  expectedRoot: bigint,
-  maxIndex: bigint = (1n << BigInt(MERKLE_TREE_DEPTH)) - 1n
-): bigint | null {
-  // Try different indices to see which one produces the expected root
-  for (let index = 0n; index <= maxIndex; index++) {
-    try {
-      const reconstructedRoot = reconstructMerkleRoot(proof, index, leafValue);
-      if (reconstructedRoot === expectedRoot) {
-        return index;
-      }
-    } catch (error) {
-      // Continue trying other indices if reconstruction fails
-      continue;
+      currentValue = poseidonHash(proofBytes, currentValue);
     }
   }
 
-  return null;
+  return BytesUtils.toBigInt(currentValue, "little");
 }
 
 /**
@@ -98,63 +57,11 @@ export function calculateRateCommitment(
   idCommitment: bigint,
   rateLimit: bigint
 ): bigint {
-  const idBytes = bigIntToBytes32(idCommitment);
-  const rateLimitBytes = bigIntToBytes32(rateLimit);
+  const idBytes = BytesUtils.bytes32FromBigInt(idCommitment);
+  const rateLimitBytes = BytesUtils.bytes32FromBigInt(rateLimit);
 
   const hashResult = poseidonHash(idBytes, rateLimitBytes);
   return BytesUtils.toBigInt(hashResult, "little");
-}
-
-/**
- * Converts a bigint to a 32-byte Uint8Array in little-endian format
- *
- * @param value - The bigint value to convert
- * @returns 32-byte Uint8Array representation
- */
-function bigIntToBytes32(value: bigint): Uint8Array {
-  const bytes = new Uint8Array(32);
-  let temp = value;
-
-  for (let i = 0; i < 32; i++) {
-    bytes[i] = Number(temp & 0xffn);
-    temp >>= 8n;
-  }
-
-  return bytes;
-}
-
-/**
- * Extracts the path direction bits from a Merkle proof by finding the leaf index
- * that produces the expected root, then converting that index to path directions
- *
- * @param proof - Array of MERKLE_TREE_DEPTH bigint elements representing the Merkle proof
- * @param leafValue - The value of the leaf (typically the rate commitment)
- * @param expectedRoot - The expected root to match against
- * @param maxIndex - Maximum index to try (default: 2^MERKLE_TREE_DEPTH - 1)
- * @returns Array of MERKLE_TREE_DEPTH numbers (0 or 1) representing path directions, or null if no valid path found
- *          - 0 means the node is a left child (hash order: current, sibling)
- *          - 1 means the node is a right child (hash order: sibling, current)
- */
-export function extractPathDirectionsFromProof(
-  proof: readonly bigint[],
-  leafValue: bigint,
-  expectedRoot: bigint,
-  maxIndex: bigint = (1n << BigInt(MERKLE_TREE_DEPTH)) - 1n
-): number[] | null {
-  // First, find the leaf index that produces the expected root
-  const leafIndex = extractIndexFromProof(
-    proof,
-    leafValue,
-    expectedRoot,
-    maxIndex
-  );
-
-  if (leafIndex === null) {
-    return null;
-  }
-
-  // Convert the leaf index to path directions
-  return getPathDirectionsFromIndex(leafIndex);
 }
 
 /**
@@ -165,7 +72,7 @@ export function extractPathDirectionsFromProof(
  *          - 0 means the node is a left child (hash order: current, sibling)
  *          - 1 means the node is a right child (hash order: sibling, current)
  */
-function getPathDirectionsFromIndex(leafIndex: bigint): number[] {
+export function getPathDirectionsFromIndex(leafIndex: bigint): number[] {
   const pathDirections: number[] = [];
 
   // For each level (0 to MERKLE_TREE_DEPTH-1), extract the bit that determines left/right

@@ -41,7 +41,7 @@ export class Zerokit {
     idSecretHash: Uint8Array,
     pathElements: Uint8Array[],
     identityPathIndex: Uint8Array[],
-    x: Uint8Array,
+    msg: Uint8Array,
     epoch: Uint8Array,
     rateLimit: number,
     messageId: number // number of message sent by the user in this epoch
@@ -69,6 +69,7 @@ export class Zerokit {
       // We assume that each identity path index is already in little-endian format
       identityPathIndexBytes.set(identityPathIndex[i], 8 + i * 1);
     }
+    const x = sha256(msg);
     return BytesUtils.concatenate(
       idSecretHash,
       BytesUtils.writeUIntLE(new Uint8Array(32), rateLimit, 0, 32),
@@ -108,13 +109,11 @@ export class Zerokit {
       );
     }
 
-    const x = sha256(msg);
-
     const serializedWitness = await this.serializeWitness(
       idSecretHash,
       pathElements,
       identityPathIndex,
-      x,
+      msg,
       epoch,
       rateLimit,
       messageId
