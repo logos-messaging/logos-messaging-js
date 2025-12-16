@@ -37,7 +37,7 @@ export class Zerokit {
     return IdentityCredential.fromBytes(memKeys);
   }
 
-  public async serializeWitness(
+  private async serializeWitness(
     idSecretHash: Uint8Array,
     pathElements: Uint8Array[],
     identityPathIndex: Uint8Array[],
@@ -113,6 +113,12 @@ export class Zerokit {
       );
     }
 
+    if (messageId < 0 || messageId >= rateLimit) {
+      throw new Error(
+        `messageId must be an integer between 0 and ${rateLimit - 1}, got ${messageId}`
+      );
+    }
+
     const serializedWitness = await this.serializeWitness(
       idSecretHash,
       pathElements,
@@ -143,6 +149,12 @@ export class Zerokit {
   ): boolean {
     if (signalLength.length !== 8)
       throw new Error("signalLength must be 8 bytes");
+    if (proof.length !== 288) throw new Error("proof must be 288 bytes");
+    if (roots.length == 0) throw new Error("roots array is empty");
+    if (roots.find((root) => root.length !== 32)) {
+      throw new Error("All roots must be 32 bytes");
+    }
+
     return zerokitRLN.verifyWithRoots(
       this.zkRLN,
       BytesUtils.concatenate(proof, signalLength, signal),
