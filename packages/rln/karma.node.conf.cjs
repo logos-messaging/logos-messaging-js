@@ -1,4 +1,11 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+/**
+ * Karma configuration for node integration tests that require nwaku Docker nodes.
+ * These tests connect to pre-started Docker nwaku nodes.
+ *
+ * Usage: npm run test:node
+ * (This will start the nwaku fleet, run these tests, and clean up)
+ */
 const path = require("path");
 
 const webpack = require("webpack");
@@ -13,8 +20,8 @@ module.exports = function (config) {
 
     files: [
       {
-        // Exclude node tests - they require Docker nwaku nodes and are run via test:node
-        pattern: "src/**/!(*.node).spec.ts",
+        // Only run node integration tests (requires Docker nwaku nodes)
+        pattern: "src/**/*.node.spec.ts",
         type: "js"
       },
       {
@@ -47,11 +54,19 @@ module.exports = function (config) {
         watched: false,
         type: "wasm",
         nocache: true
+      },
+      {
+        // Fleet info is written by the integration test runner
+        pattern: "fleet-info.json",
+        included: false,
+        served: true,
+        watched: false,
+        nocache: true
       }
     ],
 
     preprocessors: {
-      "src/**/!(*.node).spec.ts": ["webpack"]
+      "src/**/*.node.spec.ts": ["webpack"]
     },
 
     client: {

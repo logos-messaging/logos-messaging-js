@@ -31,5 +31,5 @@ export function dateToEpochBytes(timestamp: Date): Uint8Array {
 
 export function dateToNanosecondBytes(timestamp: Date): Uint8Array {
   const nanoseconds = BigInt(timestamp.getTime()) * 1000000n;
-  return BytesUtils.fromBigInt(nanoseconds, 8, "little");
+  return BytesUtils.bytes32FromBigInt(nanoseconds, "little");
 }

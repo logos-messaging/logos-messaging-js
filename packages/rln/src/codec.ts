@@ -22,12 +22,10 @@ export class RLNEncoder implements IEncoder {
     private readonly encoder: IEncoder,
     private readonly rlnInstance: RLNInstance,
     private readonly rateLimit: number,
-    public index: number,
     public pathElements: Uint8Array[],
     public identityPathIndex: Uint8Array[],
     identityCredential: IdentityCredential
   ) {
-    if (index < 0) throw new Error("Invalid membership index");
     this.idSecretHash = identityCredential.IDSecretHash;
   }
 
@@ -48,7 +46,6 @@ export class RLNEncoder implements IEncoder {
     if (!message.rateLimitProof) {
       message.rateLimitProof = await this.generateProof(
         message,
-        this.index,
         this.pathElements,
         this.identityPathIndex
       );
@@ -67,7 +64,6 @@ export class RLNEncoder implements IEncoder {
     if (!message.rateLimitProof) {
       protoMessage.rateLimitProof = await this.generateProof(
         message,
-        this.index,
         this.pathElements,
         this.identityPathIndex
       );
@@ -80,7 +76,6 @@ export class RLNEncoder implements IEncoder {
 
   private async generateProof(
     message: IMessage,
-    leafIndex: number,
     pathElements: Uint8Array[],
     identityPathIndex: Uint8Array[]
   ): Promise<IRateLimitProof> {
@@ -90,7 +85,6 @@ export class RLNEncoder implements IEncoder {
     const { proof, epoch, rlnIdentifier } =
       await this.rlnInstance.zerokit.generateRLNProof(
         signal,
-        leafIndex,
         message.timestamp,
         this.idSecretHash,
         pathElements,
@@ -122,7 +116,6 @@ export class RLNEncoder implements IEncoder {
 type RLNEncoderOptions = {
   encoder: IEncoder;
   rlnInstance: RLNInstance;
-  index: number;
   credential: IdentityCredential;
   pathElements: Uint8Array[];
   identityPathIndex: Uint8Array[];
@@ -134,7 +127,6 @@ export const createRLNEncoder = (options: RLNEncoderOptions): RLNEncoder => {
     options.encoder,
     options.rlnInstance,
     options.rateLimit,
-    options.index,
     options.pathElements,
     options.identityPathIndex,
     options.credential
