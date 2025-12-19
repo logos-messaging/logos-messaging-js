@@ -3,7 +3,7 @@ import { hash, poseidonHash as poseidon } from "@waku/zerokit-rln-wasm-utils";
 import { BytesUtils } from "./bytes.js";
 
 export function poseidonHash(...input: Array<Uint8Array>): Uint8Array {
-  const inputLen = BytesUtils.writeUIntLE(
+  const inputLen = BytesUtils.writeUintLE(
     new Uint8Array(8),
     input.length,
     0,

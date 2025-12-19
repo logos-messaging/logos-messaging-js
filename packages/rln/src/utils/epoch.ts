@@ -17,7 +17,7 @@ export function dateToEpoch(
 }
 
 export function epochIntToBytes(epoch: number): Uint8Array {
-  return BytesUtils.writeUIntLE(new Uint8Array(32), epoch, 0, 32);
+  return BytesUtils.writeUintLE(new Uint8Array(32), epoch, 0, 32);
 }
 
 export function epochBytesToInt(bytes: Uint8Array): number {

@@ -77,14 +77,14 @@ describe("RLN Proof Integration Tests", function () {
         BytesUtils.bytes32FromBigInt(element, "little")
       ),
       proofElementIndexes.map((index) =>
-        BytesUtils.writeUIntLE(new Uint8Array(1), index, 0, 1)
+        BytesUtils.writeUintLE(new Uint8Array(1), index, 0, 1)
       ),
       Number(rateLimit),
       0
     );
 
     const isValid = rlnInstance.zerokit.verifyRLNProof(
-      BytesUtils.writeUIntLE(new Uint8Array(8), testMessage.length, 0, 8),
+      BytesUtils.writeUintLE(new Uint8Array(8), testMessage.length, 0, 8),
       testMessage,
       proof,
       [BytesUtils.bytes32FromBigInt(merkleRoot, "little")]

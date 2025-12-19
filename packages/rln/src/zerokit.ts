@@ -52,7 +52,7 @@ export class Zerokit {
       sha256(this.rlnIdentifier)
     );
     const pathElementsBytes = new Uint8Array(8 + pathElements.length * 32);
-    BytesUtils.writeUIntLE(pathElementsBytes, pathElements.length, 0, 8);
+    BytesUtils.writeUintLE(pathElementsBytes, pathElements.length, 0, 8);
     for (let i = 0; i < pathElements.length; i++) {
       // We assume that the path elements are already in little-endian format
       pathElementsBytes.set(pathElements[i], 8 + i * 32);
@@ -60,7 +60,7 @@ export class Zerokit {
     const identityPathIndexBytes = new Uint8Array(
       8 + identityPathIndex.length * 1
     );
-    BytesUtils.writeUIntLE(
+    BytesUtils.writeUintLE(
       identityPathIndexBytes,
       identityPathIndex.length,
       0,
@@ -73,8 +73,8 @@ export class Zerokit {
     const x = sha256(msg);
     return BytesUtils.concatenate(
       idSecretHash,
-      BytesUtils.writeUIntLE(new Uint8Array(32), rateLimit, 0, 32),
-      BytesUtils.writeUIntLE(new Uint8Array(32), messageId, 0, 32),
+      BytesUtils.writeUintLE(new Uint8Array(32), rateLimit, 0, 32),
+      BytesUtils.writeUintLE(new Uint8Array(32), messageId, 0, 32),
       pathElementsBytes,
       identityPathIndexBytes,
       x,
