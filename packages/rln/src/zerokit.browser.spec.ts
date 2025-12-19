@@ -10,17 +10,29 @@ describe("@waku/rln", () => {
     const memKeys1 = rlnInstance.zerokit.generateSeededIdentityCredential(seed);
     const memKeys2 = rlnInstance.zerokit.generateSeededIdentityCredential(seed);
 
-    memKeys1.IDCommitment.forEach((element, index) => {
-      expect(element).to.equal(memKeys2.IDCommitment[index]);
-    });
-    memKeys1.IDNullifier.forEach((element, index) => {
-      expect(element).to.equal(memKeys2.IDNullifier[index]);
-    });
-    memKeys1.IDSecretHash.forEach((element, index) => {
-      expect(element).to.equal(memKeys2.IDSecretHash[index]);
-    });
-    memKeys1.IDTrapdoor.forEach((element, index) => {
-      expect(element).to.equal(memKeys2.IDTrapdoor[index]);
-    });
+    memKeys1
+      .getCommitment()
+      .toBytesLE()
+      .forEach((element, index) => {
+        expect(element).to.equal(memKeys2.getCommitment().toBytesLE()[index]);
+      });
+    memKeys1
+      .getNullifier()
+      .toBytesLE()
+      .forEach((element, index) => {
+        expect(element).to.equal(memKeys2.getNullifier().toBytesLE()[index]);
+      });
+    memKeys1
+      .getSecretHash()
+      .toBytesLE()
+      .forEach((element, index) => {
+        expect(element).to.equal(memKeys2.getSecretHash().toBytesLE()[index]);
+      });
+    memKeys1
+      .getTrapdoor()
+      .toBytesLE()
+      .forEach((element, index) => {
+        expect(element).to.equal(memKeys2.getTrapdoor().toBytesLE()[index]);
+      });
   });
 });

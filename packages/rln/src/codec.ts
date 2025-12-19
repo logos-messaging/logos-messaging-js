@@ -84,7 +84,7 @@ export class RLNEncoder implements IEncoder {
         0 // TODO: need to track messages sent per epoch
       );
 
-    return new Proof(proof, epoch, rlnIdentifier);
+    return new Proof(proof.toBytesLE(), epoch, rlnIdentifier);
   }
 
   public get pubsubTopic(): string {

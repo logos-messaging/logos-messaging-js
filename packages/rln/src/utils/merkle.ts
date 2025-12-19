@@ -1,5 +1,6 @@
+import { Hasher, WasmFr } from "@waku/zerokit-rln-wasm";
+
 import { BytesUtils } from "./bytes.js";
-import { poseidonHash } from "./hash.js";
 
 /**
  * The fixed depth of the Merkle tree used in the RLN contract
@@ -26,23 +27,27 @@ export function reconstructMerkleRoot(
     );
   }
 
-  let currentValue = BytesUtils.bytes32FromBigInt(leafValue);
+  let currentValue = WasmFr.fromBytesLE(
+    BytesUtils.bytes32FromBigInt(leafValue)
+  );
 
   for (let level = 0; level < MERKLE_TREE_DEPTH; level++) {
     const bit = (leafIndex >> BigInt(level)) & 1n;
 
-    const proofBytes = BytesUtils.bytes32FromBigInt(proof[level]);
+    const proofFr = WasmFr.fromBytesLE(
+      BytesUtils.bytes32FromBigInt(proof[level])
+    );
 
     if (bit === 0n) {
       // Current node is a left child: hash(current, proof[level])
-      currentValue = poseidonHash(currentValue, proofBytes);
+      currentValue = Hasher.poseidonHashPair(currentValue, proofFr);
     } else {
       // Current node is a right child: hash(proof[level], current)
-      currentValue = poseidonHash(proofBytes, currentValue);
+      currentValue = Hasher.poseidonHashPair(proofFr, currentValue);
     }
   }
 
-  return BytesUtils.toBigInt(currentValue, "little");
+  return BytesUtils.toBigInt(currentValue.toBytesLE(), "little");
 }
 
 /**
@@ -60,8 +65,11 @@ export function calculateRateCommitment(
   const idBytes = BytesUtils.bytes32FromBigInt(idCommitment);
   const rateLimitBytes = BytesUtils.bytes32FromBigInt(rateLimit);
 
-  const hashResult = poseidonHash(idBytes, rateLimitBytes);
-  return BytesUtils.toBigInt(hashResult, "little");
+  const hashResult = Hasher.poseidonHashPair(
+    WasmFr.fromBytesLE(idBytes),
+    WasmFr.fromBytesLE(rateLimitBytes)
+  );
+  return BytesUtils.toBigInt(hashResult.toBytesLE(), "little");
 }
 
 /**

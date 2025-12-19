@@ -133,7 +133,7 @@ describe("RLN Proof Unit Tests", function () {
       );
 
     // Parse proof bytes into Proof class
-    const parsedProof = new Proof(proof, epoch, rlnIdentifier);
+    const parsedProof = new Proof(proof.toBytesLE(), epoch, rlnIdentifier);
 
     // Verify all fields have correct lengths according to Nim format:
     // proof<128> | root<32> | external_nullifier<32> | share_x<32> | share_y<32> | nullifier<32>
@@ -154,7 +154,7 @@ describe("RLN Proof Unit Tests", function () {
     // Verify round-trip: proofToBytes should reconstruct original bytes
     const reconstructedBytes = proofToBytes(parsedProof);
     expect(reconstructedBytes).to.deep.equal(
-      proof,
+      proof.toBytesLE(),
       "Reconstructed bytes should match original"
     );
 

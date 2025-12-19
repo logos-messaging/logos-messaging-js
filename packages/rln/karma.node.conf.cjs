@@ -33,7 +33,7 @@ module.exports = function (config) {
         nocache: true
       },
       {
-        pattern: "src/resources/**/*.zkey",
+        pattern: "src/resources/**/*.arkzkey",
         included: false,
         served: true,
         watched: false,
@@ -41,14 +41,6 @@ module.exports = function (config) {
       },
       {
         pattern: "../../node_modules/@waku/zerokit-rln-wasm/*.wasm",
-        included: false,
-        served: true,
-        watched: false,
-        type: "wasm",
-        nocache: true
-      },
-      {
-        pattern: "../../node_modules/@waku/zerokit-rln-wasm-utils/*.wasm",
         included: false,
         served: true,
         watched: false,
@@ -83,7 +75,7 @@ module.exports = function (config) {
 
     mime: {
       "application/wasm": ["wasm"],
-      "application/octet-stream": ["zkey"]
+      "application/octet-stream": ["arkzkey"]
     },
 
     customHeaders: [
@@ -93,7 +85,7 @@ module.exports = function (config) {
         value: "application/wasm"
       },
       {
-        match: ".*\\.zkey$",
+        match: ".*\\.arkzkey$",
         name: "Content-Type",
         value: "application/octet-stream"
       }
@@ -106,16 +98,10 @@ module.exports = function (config) {
           __dirname,
           "../../node_modules/@waku/zerokit-rln-wasm/rln_wasm_bg.wasm"
         ),
-      "/base/rln_wasm_utils_bg.wasm":
-        "/absolute" +
-        path.resolve(
-          __dirname,
-          "../../node_modules/@waku/zerokit-rln-wasm-utils/rln_wasm_utils_bg.wasm"
-        ),
       "/base/rln.wasm":
         "/absolute" + path.resolve(__dirname, "src/resources/rln.wasm"),
-      "/base/rln_final.zkey":
-        "/absolute" + path.resolve(__dirname, "src/resources/rln_final.zkey")
+      "/base/rln_final.arkzkey":
+        "/absolute" + path.resolve(__dirname, "src/resources/rln_final.arkzkey")
     },
 
     webpack: {
@@ -146,7 +132,7 @@ module.exports = function (config) {
             }
           },
           {
-            test: /\.zkey$/,
+            test: /\.arkzkey$/,
             type: "asset/resource",
             generator: {
               filename: "[name][ext]"

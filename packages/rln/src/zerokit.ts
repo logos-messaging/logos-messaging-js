@@ -1,17 +1,21 @@
-import * as zerokitRLN from "@waku/zerokit-rln-wasm";
-import { generateSeededExtendedMembershipKey } from "@waku/zerokit-rln-wasm-utils";
+import {
+  ExtendedIdentity,
+  Hasher,
+  VecWasmFr,
+  WasmFr,
+  WasmRLN,
+  WasmRLNProof,
+  WasmRLNWitnessInput
+} from "@waku/zerokit-rln-wasm";
 
 import { DEFAULT_RATE_LIMIT, RATE_LIMIT_PARAMS } from "./contract/constants.js";
-import { IdentityCredential } from "./identity.js";
 import { WitnessCalculator } from "./resources/witness_calculator";
-import { BytesUtils } from "./utils/bytes.js";
 import { dateToEpochBytes } from "./utils/epoch.js";
-import { poseidonHash, sha256 } from "./utils/hash.js";
 import { MERKLE_TREE_DEPTH } from "./utils/merkle.js";
 
 export class Zerokit {
   public constructor(
-    private readonly zkRLN: number,
+    private readonly zkRLN: WasmRLN,
     private readonly witnessCalculator: WitnessCalculator,
     public readonly rateLimit: number = DEFAULT_RATE_LIMIT,
     public readonly rlnIdentifier: Uint8Array = (() => {
@@ -22,63 +26,14 @@ export class Zerokit {
     })()
   ) {}
 
-  public get getZkRLN(): number {
-    return this.zkRLN;
-  }
-
   public get getWitnessCalculator(): WitnessCalculator {
     return this.witnessCalculator;
   }
 
-  public generateSeededIdentityCredential(seed: string): IdentityCredential {
+  public generateSeededIdentityCredential(seed: string): ExtendedIdentity {
     const stringEncoder = new TextEncoder();
     const seedBytes = stringEncoder.encode(seed);
-    const memKeys = generateSeededExtendedMembershipKey(seedBytes, true);
-    return IdentityCredential.fromBytes(memKeys);
-  }
-
-  private async serializeWitness(
-    idSecretHash: Uint8Array,
-    pathElements: Uint8Array[],
-    identityPathIndex: Uint8Array[],
-    msg: Uint8Array,
-    epoch: Uint8Array,
-    rateLimit: number,
-    messageId: number // number of message sent by the user in this epoch
-  ): Promise<Uint8Array> {
-    const externalNullifier = poseidonHash(
-      sha256(epoch),
-      sha256(this.rlnIdentifier)
-    );
-    const pathElementsBytes = new Uint8Array(8 + pathElements.length * 32);
-    BytesUtils.writeUIntLE(pathElementsBytes, pathElements.length, 0, 8);
-    for (let i = 0; i < pathElements.length; i++) {
-      // We assume that the path elements are already in little-endian format
-      pathElementsBytes.set(pathElements[i], 8 + i * 32);
-    }
-    const identityPathIndexBytes = new Uint8Array(
-      8 + identityPathIndex.length * 1
-    );
-    BytesUtils.writeUIntLE(
-      identityPathIndexBytes,
-      identityPathIndex.length,
-      0,
-      8
-    );
-    for (let i = 0; i < identityPathIndex.length; i++) {
-      // We assume that each identity path index is already in little-endian format
-      identityPathIndexBytes.set(identityPathIndex[i], 8 + i * 1);
-    }
-    const x = sha256(msg);
-    return BytesUtils.concatenate(
-      idSecretHash,
-      BytesUtils.writeUIntLE(new Uint8Array(32), rateLimit, 0, 32),
-      BytesUtils.writeUIntLE(new Uint8Array(32), messageId, 0, 32),
-      pathElementsBytes,
-      identityPathIndexBytes,
-      x,
-      externalNullifier
-    );
+    return ExtendedIdentity.generateSeeded(seedBytes);
   }
 
   public async generateRLNProof(
@@ -90,7 +45,7 @@ export class Zerokit {
     rateLimit: number,
     messageId: number // number of message sent by the user in this epoch
   ): Promise<{
-    proof: Uint8Array;
+    proof: WasmRLNProof;
     epoch: Uint8Array;
     rlnIdentifier: Uint8Array;
   }> {
@@ -120,26 +75,37 @@ export class Zerokit {
         `messageId must be an integer between 0 and ${rateLimit - 1}, got ${messageId}`
       );
     }
-
-    const serializedWitness = await this.serializeWitness(
-      idSecretHash,
-      pathElements,
-      identityPathIndex,
-      msg,
-      epoch,
-      rateLimit,
-      messageId
+    const pathElementsVec = new VecWasmFr();
+    for (const element of pathElements) {
+      pathElementsVec.push(WasmFr.fromBytesLE(element));
+    }
+    const identityPathIndexBytes = new Uint8Array(identityPathIndex.length);
+    for (let i = 0; i < identityPathIndex.length; i++) {
+      // We assume that each identity path index is already in little-endian format
+      identityPathIndexBytes.set(identityPathIndex[i], i);
+    }
+    const x = Hasher.hashToFieldLE(msg);
+    const externalNullifier = Hasher.poseidonHashPair(
+      Hasher.hashToFieldLE(epoch),
+      Hasher.hashToFieldLE(this.rlnIdentifier)
     );
-    const witnessJson: Record<string, unknown> = zerokitRLN.rlnWitnessToJson(
-      this.zkRLN,
-      serializedWitness
-    ) as Record<string, unknown>;
+    const witness = new WasmRLNWitnessInput(
+      WasmFr.fromBytesLE(idSecretHash),
+      WasmFr.fromUint(rateLimit),
+      WasmFr.fromUint(messageId),
+      pathElementsVec,
+      identityPathIndexBytes,
+      x,
+      externalNullifier
+    );
+
     const calculatedWitness: bigint[] =
-      await this.witnessCalculator.calculateWitness(witnessJson);
-    const proof = zerokitRLN.generateRLNProofWithWitness(
-      this.zkRLN,
+      await this.witnessCalculator.calculateWitness(
+        witness.toBigIntJson() as Record<string, unknown>
+      );
+    const proof = this.zkRLN.generateRLNProofWithWitness(
       calculatedWitness,
-      serializedWitness
+      witness
     );
     return {
       proof,
@@ -151,21 +117,21 @@ export class Zerokit {
   public verifyRLNProof(
     signalLength: Uint8Array,
     signal: Uint8Array,
-    proof: Uint8Array,
+    proof: WasmRLNProof,
     roots: Uint8Array[]
   ): boolean {
     if (signalLength.length !== 8)
       throw new Error("signalLength must be 8 bytes");
-    if (proof.length !== 288) throw new Error("proof must be 288 bytes");
     if (roots.length == 0) throw new Error("roots array is empty");
     if (roots.find((root) => root.length !== 32)) {
       throw new Error("All roots must be 32 bytes");
     }
 
-    return zerokitRLN.verifyWithRoots(
-      this.zkRLN,
-      BytesUtils.concatenate(proof, signalLength, signal),
-      BytesUtils.concatenate(...roots)
-    );
+    const rootsVec = new VecWasmFr();
+    for (const root of roots) {
+      rootsVec.push(WasmFr.fromBytesLE(root));
+    }
+    const x = Hasher.hashToFieldLE(signal);
+    return this.zkRLN.verifyWithRoots(proof, rootsVec, x);
   }
 }

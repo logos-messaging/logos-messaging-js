@@ -3,6 +3,7 @@ import { publicActions } from "viem";
 
 import { RLN_CONTRACT } from "./contract/constants.js";
 import { RLNBaseContract } from "./contract/rln_base_contract.js";
+import { IdentityCredential } from "./identity.js";
 import { Keystore } from "./keystore/index.js";
 import type {
   DecryptedCredentials,
@@ -111,9 +112,10 @@ export class RLNCredentialsManager {
 
     if ("signature" in options) {
       log.info("Using Zerokit to generate identity");
-      identity = this.zerokit.generateSeededIdentityCredential(
+      const extendedIdentity = this.zerokit.generateSeededIdentityCredential(
         options.signature
       );
+      identity = IdentityCredential.fromBytes(extendedIdentity.toBytesLE());
     }
 
     if (!identity) {
