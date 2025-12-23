@@ -98,8 +98,7 @@ describe("Peer Cache Discovery", function () {
     const discoveredPeers = new Set<string>();
     await new Promise<void>((resolve) => {
       waku.libp2p.addEventListener("peer:identify", (evt) => {
-        const peerId = evt.detail.peerId.toString();
-        discoveredPeers.add(peerId);
+        discoveredPeers.add(evt.detail.peerId.toString());
 
         if (discoveredPeers.has(peerId1) && discoveredPeers.has(peerId2)) {
           resolve();
@@ -130,8 +129,7 @@ describe("Peer Cache Discovery", function () {
 
     await new Promise<void>((resolve) => {
       waku.libp2p.addEventListener("peer:identify", (evt) => {
-        const peerId = evt.detail.peerId.toString();
-        discoveredPeers.add(peerId);
+        discoveredPeers.add(evt.detail.peerId.toString());
 
         if (discoveredPeers.has(targetPeerId)) {
           resolve();
