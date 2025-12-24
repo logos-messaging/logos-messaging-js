@@ -170,7 +170,7 @@ describe("Wait for remote peer", function () {
     await nwaku.start({
       lightpush: true,
       filter: false,
-      relay: false,
+      relay: true,
       store: false
     });
     const multiAddrWithId = await nwaku.getMultiaddrWithId();
@@ -229,7 +229,7 @@ describe("Wait for remote peer", function () {
     await nwaku.start({
       filter: true,
       lightpush: true,
-      relay: false
+      relay: true
       // store: true
     });
     const multiAddrWithId = await nwaku.getMultiaddrWithId();
