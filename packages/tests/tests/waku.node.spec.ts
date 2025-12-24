@@ -57,7 +57,8 @@ describe("Waku Dial [node only]", function () {
       await nwaku.start({
         filter: true,
         store: true,
-        lightpush: true
+        lightpush: true,
+        relay: true
       });
       const multiAddrWithId = await nwaku.getMultiaddrWithId();
 
@@ -91,7 +92,8 @@ describe("Waku Dial [node only]", function () {
       await nwaku.start({
         filter: true,
         store: true,
-        lightpush: true
+        lightpush: true,
+        relay: true
       });
       const multiAddrWithId = await nwaku.getMultiaddrWithId();
 
