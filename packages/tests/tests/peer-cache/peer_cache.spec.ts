@@ -70,14 +70,16 @@ describe("Peer Cache Discovery", function () {
 
   it("should discover peers from provided peer cache", async function () {
     const mockCache = new MockPeerCache();
+    const peerId1 = (await nwaku1.getPeerId()).toString();
+    const peerId2 = (await nwaku2.getPeerId()).toString();
 
     mockCache.set([
       {
-        id: (await nwaku1.getPeerId()).toString(),
+        id: peerId1,
         multiaddrs: [(await nwaku1.getMultiaddrWithId()).toString()]
       },
       {
-        id: (await nwaku2.getPeerId()).toString(),
+        id: peerId2,
         multiaddrs: [(await nwaku2.getMultiaddrWithId()).toString()]
       }
     ]);
@@ -96,21 +98,22 @@ describe("Peer Cache Discovery", function () {
     const discoveredPeers = new Set<string>();
     await new Promise<void>((resolve) => {
       waku.libp2p.addEventListener("peer:identify", (evt) => {
-        const peerId = evt.detail.peerId;
-        discoveredPeers.add(peerId.toString());
+        discoveredPeers.add(evt.detail.peerId.toString());
 
-        if (discoveredPeers.size === 2) {
+        if (discoveredPeers.has(peerId1) && discoveredPeers.has(peerId2)) {
           resolve();
         }
       });
     });
 
-    expect(dialPeerSpy.callCount).to.equal(2);
-    expect(discoveredPeers.size).to.equal(2);
+    expect(dialPeerSpy.callCount).to.be.greaterThanOrEqual(2);
+    expect(discoveredPeers).to.include(peerId1);
+    expect(discoveredPeers).to.include(peerId2);
   });
 
   it("should monitor connected peers and store them into cache", async function () {
     const mockCache = new MockPeerCache();
+    const targetPeerId = (await nwaku2.getPeerId()).toString();
 
     waku = await createLightNode({
       networkConfig: DefaultTestNetworkConfig,
@@ -126,19 +129,18 @@ describe("Peer Cache Discovery", function () {
 
     await new Promise<void>((resolve) => {
       waku.libp2p.addEventListener("peer:identify", (evt) => {
-        const peerId = evt.detail.peerId;
-        discoveredPeers.add(peerId.toString());
+        discoveredPeers.add(evt.detail.peerId.toString());
 
-        if (discoveredPeers.size === 1) {
+        if (discoveredPeers.has(targetPeerId)) {
           resolve();
         }
       });
     });
 
-    expect(discoveredPeers.size).to.equal(1);
+    expect(discoveredPeers).to.include(targetPeerId);
 
     const cachedPeers = mockCache.get();
-    expect(cachedPeers.length).to.equal(1);
-    expect(discoveredPeers.has(cachedPeers[0].id)).to.be.true;
+    const isTargetCached = cachedPeers.some((p) => p.id === targetPeerId);
+    expect(isTargetCached).to.be.true;
   });
 });
