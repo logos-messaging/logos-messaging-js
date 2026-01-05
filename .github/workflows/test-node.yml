@@ -125,4 +125,4 @@ jobs:
           echo "## Run Information" >> $GITHUB_STEP_SUMMARY
           echo "- **NWAKU**: ${{ env.WAKUNODE_IMAGE }}" >> $GITHUB_STEP_SUMMARY
           echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "Allure report will be available at: https://logos-messaging.github.io/logos-messaging-js-allure/${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "Allure report will be available at: https://logos-messaging.github.io/logos-messaging-allure-js/${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
