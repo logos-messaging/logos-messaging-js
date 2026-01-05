@@ -89,7 +89,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ env.GITHUB_TOKEN }}
-          external_repository: logos-messaging/logos-messaging-js-allure
+          external_repository: logos-messaging/logos-messaging-allure-js
           publish_branch: gh-pages
           publish_dir: allure-history
 
