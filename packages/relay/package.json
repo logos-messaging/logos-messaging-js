@@ -59,7 +59,7 @@
     "@waku/utils": "0.0.27",
     "chai": "^4.3.10",
     "debug": "^4.3.4",
-    "fast-check": "^3.19.0",
+    "fast-check": "^4.5.3",
     "p-event": "^6.0.1"
   },
   "devDependencies": {

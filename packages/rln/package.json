@@ -64,7 +64,7 @@
     "@waku/interfaces": "0.0.34",
     "@waku/message-encryption": "^0.0.37",
     "deep-equal-in-any-order": "^2.0.6",
-    "fast-check": "^3.23.2",
+    "fast-check": "^4.5.3",
     "rollup-plugin-copy": "^3.5.0"
   },
   "files": [

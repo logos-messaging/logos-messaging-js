@@ -76,7 +76,7 @@
         "allure-commandline": "^2.27.0",
         "allure-mocha": "^2.9.2",
         "cspell": "^8.6.1",
-        "fast-check": "^3.19.0",
+        "fast-check": "^4.5.3",
         "mocha-multi-reporters": "^1.5.1",
         "npm-run-all": "^4.1.5",
         "rollup": "^4.12.0"
