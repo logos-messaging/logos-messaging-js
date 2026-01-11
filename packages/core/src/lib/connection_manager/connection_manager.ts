@@ -29,6 +29,7 @@ const DEFAULT_MAX_CONNECTIONS = 10;
 const DEFAULT_MAX_DIALING_PEERS = 3;
 const DEFAULT_FAILED_DIAL_COOLDOWN_SEC = 60;
 const DEFAULT_DIAL_COOLDOWN_SEC = 10;
+const DEFAULT_DIAL_TIMEOUT_SEC = 30;
 
 type ConnectionManagerConstructorOptions = {
   libp2p: Libp2p;
@@ -61,6 +62,7 @@ export class ConnectionManager implements IConnectionManager {
       maxDialingPeers: DEFAULT_MAX_DIALING_PEERS,
       failedDialCooldown: DEFAULT_FAILED_DIAL_COOLDOWN_SEC,
       dialCooldown: DEFAULT_DIAL_COOLDOWN_SEC,
+      dialTimeout: DEFAULT_DIAL_TIMEOUT_SEC,
       ...options.config
     };
 

@@ -65,7 +65,8 @@ describe("ConnectionLimiter", () => {
     enableAutoRecovery: true,
     maxDialingPeers: 3,
     failedDialCooldown: 60,
-    dialCooldown: 10
+    dialCooldown: 10,
+    dialTimeout: 30
   };
 
   function createLimiter(

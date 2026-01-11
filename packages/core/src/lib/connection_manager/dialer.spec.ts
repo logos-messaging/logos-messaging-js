@@ -39,6 +39,7 @@ describe("Dialer", () => {
       maxDialingPeers: 3,
       failedDialCooldown: 60,
       dialCooldown: 10,
+      dialTimeout: 30,
       maxConnections: 10,
       enableAutoRecovery: true
     };

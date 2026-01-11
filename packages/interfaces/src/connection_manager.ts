@@ -74,6 +74,13 @@ export type ConnectionManagerOptions = {
    * @default 10 seconds
    */
   dialCooldown: number;
+
+  /**
+   * Time to wait for a dial attempt to complete before timing out.
+   *
+   * @default 30 seconds
+   */
+  dialTimeout: number;
 };
 
 export interface IConnectionManager {

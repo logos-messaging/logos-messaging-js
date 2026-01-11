@@ -23,7 +23,7 @@ export class Dialer implements IDialer {
   private readonly shardReader: ShardReader;
   private readonly options: ConnectionManagerOptions;
 
-  private dialingQueue: PeerId[] = [];
+  private dialingQueue: Map<string, PeerId> = new Map();
   private dialHistory: Map<string, number> = new Map();
   private failedDials: Map<string, number> = new Map();
   private dialingInterval: NodeJS.Timeout | null = null;
@@ -70,7 +70,7 @@ export class Dialer implements IDialer {
       return;
     }
 
-    const isEmptyQueue = this.dialingQueue.length === 0;
+    const isEmptyQueue = this.dialingQueue.size === 0;
     const isNotDialing = !this.isProcessing && !this.isImmediateDialing;
 
     // If queue is empty and we're not currently processing, dial immediately
@@ -81,29 +81,28 @@ export class Dialer implements IDialer {
       this.isImmediateDialing = false;
       log.info("Released immediate dial lock");
     } else {
-      this.dialingQueue.push(peerId);
+      this.dialingQueue.set(peerId.toString(), peerId);
       log.info(
-        `Added peer to dialing queue, queue size: ${this.dialingQueue.length}`
+        `Added peer to dialing queue, queue size: ${this.dialingQueue.size}`
       );
     }
   }
 
   private async processQueue(): Promise<void> {
-    if (this.dialingQueue.length === 0 || this.isProcessing) {
+    if (this.dialingQueue.size === 0 || this.isProcessing) {
       return;
     }
 
     this.isProcessing = true;
 
     try {
-      const peersToDial = this.dialingQueue.slice(
-        0,
-        this.options.maxDialingPeers
-      );
-      this.dialingQueue = this.dialingQueue.slice(peersToDial.length);
+      const allPeers = Array.from(this.dialingQueue.values());
+      const peersToDial = allPeers.slice(0, this.options.maxDialingPeers);
+
+      peersToDial.forEach((peer) => this.dialingQueue.delete(peer.toString()));
 
       log.info(
-        `Processing dial queue: dialing ${peersToDial.length} peers, ${this.dialingQueue.length} remaining in queue`
+        `Processing dial queue: dialing ${peersToDial.length} peers, ${this.dialingQueue.size} remaining in queue`
       );
 
       await Promise.all(peersToDial.map((peerId) => this.dialPeer(peerId)));
@@ -116,7 +115,19 @@ export class Dialer implements IDialer {
     try {
       log.info(`Dialing peer from queue: ${peerId}`);
 
-      await this.libp2p.dial(peerId);
+      await Promise.race([
+        this.libp2p.dial(peerId),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(`Dial timeout after ${this.options.dialTimeout}s`)
+              ),
+            this.options.dialTimeout * 1000
+          )
+        )
+      ]);
+
       this.dialHistory.set(peerId.toString(), Date.now());
       this.failedDials.delete(peerId.toString());
 
