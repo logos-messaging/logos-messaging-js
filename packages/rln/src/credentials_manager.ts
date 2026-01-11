@@ -3,6 +3,7 @@ import { publicActions } from "viem";
 
 import { RLN_CONTRACT } from "./contract/constants.js";
 import { RLNBaseContract } from "./contract/rln_base_contract.js";
+import { IdentityCredential } from "./identity.js";
 import { Keystore } from "./keystore/index.js";
 import type {
   DecryptedCredentials,
@@ -10,7 +11,12 @@ import type {
 } from "./keystore/index.js";
 import { KeystoreEntity, Password } from "./keystore/types.js";
 import { RegisterMembershipOptions, StartRLNOptions } from "./types.js";
-import { createViemClientFromWindow, RpcClient } from "./utils/index.js";
+import {
+  BytesUtils,
+  createViemClientFromWindow,
+  getPathDirectionsFromIndex,
+  RpcClient
+} from "./utils/index.js";
 import { Zerokit } from "./zerokit.js";
 
 const log = new Logger("rln:credentials");
@@ -28,8 +34,13 @@ export class RLNCredentialsManager {
 
   protected keystore = Keystore.create();
   public credentials: undefined | DecryptedCredentials;
+  public pathElements: undefined | Uint8Array[];
+  public identityPathIndex: undefined | Uint8Array[];
 
   public zerokit: Zerokit;
+
+  private unwatchRootStored?: () => void;
+  private rootPollingInterval?: number = 5000;
 
   public constructor(zerokit: Zerokit) {
     log.info("RLNCredentialsManager initialized");
@@ -73,6 +84,11 @@ export class RLNCredentialsManager {
         rateLimit: rateLimit ?? this.zerokit.rateLimit
       });
 
+      if (this.credentials) {
+        await this.updateMerkleProof();
+        await this.startWatchingRootStored();
+      }
+
       log.info("RLNCredentialsManager successfully started");
       this.started = true;
     } catch (error) {
@@ -96,9 +112,10 @@ export class RLNCredentialsManager {
 
     if ("signature" in options) {
       log.info("Using Zerokit to generate identity");
-      identity = this.zerokit.generateSeededIdentityCredential(
+      const extendedIdentity = this.zerokit.generateSeededIdentityCredential(
         options.signature
       );
+      identity = IdentityCredential.fromBytes(extendedIdentity.toBytesLE());
     }
 
     if (!identity) {
@@ -223,6 +240,82 @@ export class RLNCredentialsManager {
       throw Error(
         `Failed to verify chain coordinates: credentials chainID=${chainId} is not equal to registryContract chainID=${currentChainId}`
       );
+    }
+  }
+
+  /**
+   * Updates the Merkle proof for the current credentials
+   * Fetches the latest proof from the contract and updates pathElements and identityPathIndex
+   */
+  private async updateMerkleProof(): Promise<void> {
+    if (!this.contract || !this.credentials) {
+      log.warn("Cannot update merkle proof: contract or credentials not set");
+      return;
+    }
+
+    try {
+      const treeIndex = this.credentials.membership.treeIndex;
+      log.info(`Updating merkle proof for tree index: ${treeIndex}`);
+
+      // Get the merkle proof from the contract
+      const proof = await this.contract.getMerkleProof(treeIndex);
+
+      // Convert bigint[] to Uint8Array[] for pathElements
+      this.pathElements = proof.map((element) =>
+        BytesUtils.bytes32FromBigInt(element, "little")
+      );
+
+      // Get path directions from the tree index
+      const pathDirections = getPathDirectionsFromIndex(BigInt(treeIndex));
+
+      // Convert path directions to Uint8Array[] for identityPathIndex
+      this.identityPathIndex = pathDirections.map((direction: number) =>
+        Uint8Array.from([direction])
+      );
+
+      log.info("Successfully updated merkle proof", {
+        pathElementsCount: this.pathElements.length,
+        pathIndexCount: this.identityPathIndex!.length
+      });
+    } catch (error) {
+      log.error("Failed to update merkle proof:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Starts watching for RootStored events and updates merkle proof when detected
+   */
+  private async startWatchingRootStored(): Promise<void> {
+    if (!this.contract) {
+      log.warn("Cannot watch for RootStored events: contract not set");
+      return;
+    }
+
+    // Stop any existing watcher
+    this.stopWatchingRootStored();
+
+    log.info("Starting to watch for RootStored events");
+
+    this.unwatchRootStored = await this.contract.watchRootStoredEvent(() => {
+      // Update the merkle proof when root changes (fire-and-forget)
+      this.updateMerkleProof().catch((error) => {
+        log.error(
+          "Failed to update merkle proof after RootStored event:",
+          error
+        );
+      });
+    }, this.rootPollingInterval);
+  }
+
+  /**
+   * Stops watching for RootStored events
+   */
+  private stopWatchingRootStored(): void {
+    if (this.unwatchRootStored) {
+      log.info("Stopping RootStored event watcher");
+      this.unwatchRootStored();
+      this.unwatchRootStored = undefined;
     }
   }
 }

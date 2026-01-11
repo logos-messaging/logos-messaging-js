@@ -1,5 +1,5 @@
 import { Logger } from "@waku/utils";
-import init, * as zerokitRLN from "@waku/zerokit-rln-wasm";
+import init, { WasmRLN } from "@waku/zerokit-rln-wasm";
 
 import { DEFAULT_RATE_LIMIT } from "./contract/constants.js";
 import { RLNCredentialsManager } from "./credentials_manager.js";
@@ -17,12 +17,11 @@ export class RLNInstance extends RLNCredentialsManager {
   public static async create(): Promise<RLNInstance> {
     try {
       await init();
-      zerokitRLN.initPanicHook();
 
       const witnessCalculator = await RLNInstance.loadWitnessCalculator();
       const zkey = await RLNInstance.loadZkey();
 
-      const zkRLN = zerokitRLN.newRLN(zkey);
+      const zkRLN = new WasmRLN(zkey);
       const zerokit = new Zerokit(zkRLN, witnessCalculator, DEFAULT_RATE_LIMIT);
 
       return new RLNInstance(zerokit);
@@ -61,7 +60,7 @@ export class RLNInstance extends RLNCredentialsManager {
 
   public static async loadZkey(): Promise<Uint8Array> {
     try {
-      const url = new URL("./resources/rln_final.zkey", import.meta.url);
+      const url = new URL("./resources/rln_final.arkzkey", import.meta.url);
       const response = await fetch(url);
 
       if (!response.ok) {

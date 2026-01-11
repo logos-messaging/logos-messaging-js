@@ -1,8 +1,6 @@
-import { Logger } from "@waku/utils";
+import { BytesUtils } from "./bytes.js";
 
 const DefaultEpochUnitSeconds = 10; // the rln-relay epoch length in seconds
-
-const log = new Logger("rln:epoch");
 
 export function dateToEpoch(
   timestamp: Date,
@@ -10,21 +8,28 @@ export function dateToEpoch(
 ): number {
   const time = timestamp.getTime();
   const epoch = Math.floor(time / 1000 / epochUnitSeconds);
-  log.info("generated epoch", epoch);
   return epoch;
 }
 
 export function epochIntToBytes(epoch: number): Uint8Array {
-  const bytes = new Uint8Array(32);
-  const db = new DataView(bytes.buffer);
-  db.setUint32(0, epoch, true);
-  log.info("encoded epoch", epoch, bytes);
-  return bytes;
+  return BytesUtils.writeUIntLE(new Uint8Array(32), epoch, 0, 32);
 }
 
 export function epochBytesToInt(bytes: Uint8Array): number {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const epoch = dv.getUint32(0, true);
-  log.info("decoded epoch", epoch, bytes);
   return epoch;
+}
+
+export function dateToEpochSeconds(timestamp: Date): number {
+  return Math.floor(timestamp.getTime() / 1000);
+}
+
+export function dateToEpochBytes(timestamp: Date): Uint8Array {
+  return epochIntToBytes(dateToEpochSeconds(timestamp));
+}
+
+export function dateToNanosecondBytes(timestamp: Date): Uint8Array {
+  const nanoseconds = BigInt(timestamp.getTime()) * 1000000n;
+  return BytesUtils.bytes32FromBigInt(nanoseconds, "little");
 }

@@ -579,4 +579,47 @@ export class RLNBaseContract {
     }
     return { token, price };
   }
+
+  /**
+   * Watches for RootStored events emitted by the contract
+   * @param onLogs Callback function invoked when new RootStored events are detected
+   * @param options Optional configuration for the watcher
+   * @returns A function that can be invoked to stop watching for events
+   *
+   * @example
+   * ```typescript
+   * const unwatch = contract.watchRootStoredEvent({
+   *   onLogs: (logs) => {
+   *     logs.forEach(log => {
+   *       console.log('New root:', log.args.newRoot);
+   *       console.log('Block number:', log.blockNumber);
+   *     });
+   *   }
+   * });
+   *
+   * // Later, to stop watching:
+   * unwatch();
+   * ```
+   */
+  public async watchRootStoredEvent(
+    callback: () => void,
+    pollingInterval?: number
+  ): Promise<() => void> {
+    log.info("Starting to watch RootStored events", {
+      address: this.contract.address,
+      pollingInterval
+    });
+
+    const fromBlock = await this.rpcClient.getBlockNumber();
+
+    return this.contract.watchEvent.RootStored({
+      onLogs: (_) => {
+        callback();
+      },
+      onError: (error) => log.error("Error watching RootStored events:", error),
+      pollingInterval,
+      fromBlock,
+      batch: false
+    });
+  }
 }

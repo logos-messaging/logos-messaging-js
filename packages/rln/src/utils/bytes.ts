@@ -50,6 +50,47 @@ export class BytesUtils {
   }
 
   /**
+   * Convert a BigInt to a bytes32 (32-byte Uint8Array)
+   * @param value - The BigInt to convert (must fit in 32 bytes)
+   * @param outputEndianness - Endianness of the output bytes ('big' or 'little')
+   * @returns 32-byte Uint8Array representation of the BigInt
+   */
+  public static bytes32FromBigInt(
+    value: bigint,
+    outputEndianness: "big" | "little" = "little"
+  ): Uint8Array {
+    if (value < 0n) {
+      throw new Error("Cannot convert negative BigInt to bytes");
+    }
+
+    if (value >> 256n !== 0n) {
+      throw new Error(
+        `BigInt value is too large to fit in 32 bytes (max bit length: 256)`
+      );
+    }
+
+    if (value === 0n) {
+      return new Uint8Array(32);
+    }
+
+    const result = new Uint8Array(32);
+    let workingValue = value;
+
+    // Extract bytes in big-endian order
+    for (let i = 31; i >= 0; i--) {
+      result[i] = Number(workingValue & 0xffn);
+      workingValue = workingValue >> 8n;
+    }
+
+    // If we need little-endian output, reverse the array
+    if (outputEndianness === "little") {
+      result.reverse();
+    }
+
+    return result;
+  }
+
+  /**
    * Writes an unsigned integer to a buffer in little-endian format
    */
   public static writeUIntLE(

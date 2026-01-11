@@ -29,6 +29,16 @@ import type {
 
 const log = new Logger("rln:keystore");
 
+/**
+ * Custom replacer function to handle BigInt serialization in JSON.stringify
+ */
+const bigIntReplacer = (_key: string, value: unknown): unknown => {
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  return value;
+};
+
 type NwakuCredential = {
   crypto: {
     cipher: ICipherModule["function"];
@@ -160,7 +170,7 @@ export class Keystore {
   }
 
   public toString(): string {
-    return JSON.stringify(this.data);
+    return JSON.stringify(this.data, bigIntReplacer);
   }
 
   public toObject(): NwakuKeystore {
@@ -328,20 +338,23 @@ export class Keystore {
       options.identity;
 
     return utf8ToBytes(
-      JSON.stringify({
-        treeIndex: options.membership.treeIndex,
-        identityCredential: {
-          idCommitment: Array.from(IDCommitment),
-          idNullifier: Array.from(IDNullifier),
-          idSecretHash: Array.from(IDSecretHash),
-          idTrapdoor: Array.from(IDTrapdoor)
+      JSON.stringify(
+        {
+          treeIndex: options.membership.treeIndex,
+          identityCredential: {
+            idCommitment: Array.from(IDCommitment),
+            idNullifier: Array.from(IDNullifier),
+            idSecretHash: Array.from(IDSecretHash),
+            idTrapdoor: Array.from(IDTrapdoor)
+          },
+          membershipContract: {
+            chainId: options.membership.chainId,
+            address: options.membership.address
+          },
+          userMessageLimit: options.membership.rateLimit
         },
-        membershipContract: {
-          chainId: options.membership.chainId,
-          address: options.membership.address
-        },
-        userMessageLimit: options.membership.rateLimit
-      })
+        bigIntReplacer
+      )
     );
   }
 }
