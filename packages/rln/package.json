@@ -83,7 +83,7 @@
     "@wagmi/core": "^2.22.1",
     "@waku/core": "^0.0.41",
     "@waku/utils": "^0.0.28",
-    "@waku/zerokit-rln-wasm": "^0.2.1",
+    "@waku/zerokit-rln-wasm": "^1.0.0",
     "chai": "^5.1.2",
     "chai-as-promised": "^8.0.1",
     "chai-spies": "^1.1.0",
