@@ -5,11 +5,7 @@ import {
   validators,
   errorHandlers,
 } from "../utils/endpoint-handler.js";
-
-interface LightPushResult {
-  successes: string[];
-  failures: Array<{ error: string; peerId?: string }>;
-}
+import type { SerializableSDKProtocolResult } from "../../web/index.js";
 
 const log = new Logger("routes:waku");
 const router = Router();
@@ -67,9 +63,17 @@ router.post(
     },
     handleError: errorHandlers.lightpushError,
     transformResult: (result: unknown) => {
-      const lightPushResult = result as LightPushResult;
+      const lightPushResult = result as SerializableSDKProtocolResult;
       if (lightPushResult && lightPushResult.successes && lightPushResult.successes.length > 0) {
         log.info("[Server] Message successfully sent via v3 lightpush!");
+
+        const sentTime = Date.now() * 1000000;
+        const msgHash = lightPushResult.messageHash;
+
+        const myPeerId = lightPushResult.myPeerId || 'unknown';
+        lightPushResult.successes.forEach((peerId: string) => {
+          log.info(`publishWithConn my_peer_id=${myPeerId} peer_id=${peerId} msg_hash=${msgHash} sentTime=${sentTime}`);
+        });
         return {
           success: true,
           result: lightPushResult,
@@ -77,7 +81,7 @@ router.post(
       } else {
         return {
           success: false,
-          error: "Could not publish message: no suitable peers",
+          error: lightPushResult.failures[0].error,
         };
       }
     },
