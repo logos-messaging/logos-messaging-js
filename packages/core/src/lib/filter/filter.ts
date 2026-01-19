@@ -1,5 +1,4 @@
-import type { PeerId } from "@libp2p/interface";
-import type { IncomingStreamData } from "@libp2p/interface-internal";
+import type { PeerId, StreamHandler } from "@libp2p/interface";
 import {
   type ContentTopic,
   type FilterCoreResult,
@@ -52,7 +51,7 @@ export class FilterCore {
 
   public async start(): Promise<void> {
     try {
-      await this.libp2p.handle(FilterCodecs.PUSH, this.onRequest.bind(this), {
+      await this.libp2p.handle(FilterCodecs.PUSH, this.onRequest, {
         maxInboundStreams: 100
       });
     } catch (e) {
@@ -305,7 +304,7 @@ export class FilterCore {
     };
   }
 
-  private onRequest(streamData: IncomingStreamData): void {
+  private onRequest: StreamHandler = (streamData) => {
     const { connection, stream } = streamData;
     const { remotePeer } = connection;
     log.info(`Received message from ${remotePeer.toString()}`);
@@ -346,5 +345,5 @@ export class FilterCore {
     } catch (e) {
       log.error("Error decoding message", e);
     }
-  }
+  };
 }

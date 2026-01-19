@@ -25,10 +25,12 @@ export type CreateEncoderParams = CreateDecoderParams & {
   ephemeral?: boolean;
 };
 
-export enum WakuEvent {
-  Connection = "waku:connection",
-  Health = "waku:health"
-}
+export const WakuEvent = {
+  Connection: "waku:connection",
+  Health: "waku:health"
+} as const;
+
+export type WakuEvent = (typeof WakuEvent)[keyof typeof WakuEvent];
 
 export interface IWakuEvents {
   /**
@@ -36,22 +38,22 @@ export interface IWakuEvents {
    *
    * @example
    * ```typescript
-   * waku.addEventListener(WakuEvent.Connection, (event) => {
+   * waku.events.addEventListener("waku:connection", (event) => {
    *   console.log(event.detail); // true if connected, false if disconnected
    * });
    */
-  [WakuEvent.Connection]: CustomEvent<boolean>;
+  "waku:connection": CustomEvent<boolean>;
 
   /**
    * Emitted when the health status changes.
    *
    * @example
    * ```typescript
-   * waku.addEventListener(WakuEvent.Health, (event) => {
+   * waku.events.addEventListener("waku:health", (event) => {
    *   console.log(event.detail); // 'Unhealthy', 'MinimallyHealthy', or 'SufficientlyHealthy'
    * });
    */
-  [WakuEvent.Health]: CustomEvent<HealthStatus>;
+  "waku:health": CustomEvent<HealthStatus>;
 }
 
 export type IWakuEventEmitter = TypedEventEmitter<IWakuEvents>;
@@ -66,12 +68,12 @@ export interface IWaku {
   /**
    * Emits events related to the Waku node.
    * Those are:
-   * - WakuEvent.Connection
-   * - WakuEvent.Health
+   * - "waku:connection"
+   * - "waku:health"
    *
    * @example
    * ```typescript
-   * waku.events.addEventListener(WakuEvent.Connection, (event) => {
+   * waku.events.addEventListener("waku:connection", (event) => {
    *   console.log(event.detail); // true if connected, false if disconnected
    * });
    * ```
